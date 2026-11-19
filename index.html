@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#1f5f8b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Missions</title>
+<style>
+:root{--c:#1f5f8b;--c2:#e8f0f6;--bg:#f3f5f7;--card:#fff;--txt:#1d2329;--mut:#6b7680;--bd:#dde3e8;--ok:#2e7d32;--warn:#ef6c00;--err:#c62828;--r:12px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--c)}
+.hide{display:none!important}
+header{position:sticky;top:0;z-index:20;background:var(--c);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 6px #0002}
+header h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .who{font-size:12px;opacity:.85}
+header button{background:#ffffff22;border:0;color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--bd);padding:0 8px;position:sticky;top:50px;z-index:19}
+nav.tabs button{border:0;background:none;padding:12px 12px;cursor:pointer;color:var(--mut);border-bottom:3px solid transparent;white-space:nowrap;font-weight:600}
+nav.tabs button.on{color:var(--c);border-bottom-color:var(--c)}
+main{max-width:1100px;margin:0 auto;padding:12px 12px 100px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.mut{color:var(--mut);font-size:13px}
+.btn{border:0;border-radius:10px;padding:11px 16px;background:var(--c);color:#fff;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+.btn.sec{background:var(--c2);color:var(--c)}
+.btn.ok{background:var(--ok)}.btn.warn{background:var(--warn)}.btn.err{background:var(--err)}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
+.btn.full{width:100%}
+.btn:disabled{opacity:.5}
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.st-À-attribuer{background:#fdecea;color:#b71c1c}
+.st-Attribué{background:#e3f2fd;color:#0d47a1}
+.st-En-cours{background:#fff3e0;color:#e65100}
+.st-À-poursuivre{background:#fff8e1;color:#8d6e00}
+.st-Terminé{background:#e8f5e9;color:#1b5e20}
+.st-Facturé{background:#eceff1;color:#455a64}
+.st-Annulé{background:#f5f5f5;color:#9e9e9e;text-decoration:line-through}
+.urg{background:var(--err);color:#fff}
+.new{background:var(--warn);color:#fff}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px;font-weight:600}
+input[type=text],input[type=tel],input[type=date],input[type=time],input[type=email],input[type=number],input[type=password],select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:#fff}
+textarea{min-height:80px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:12px;cursor:pointer}
+.stat b{display:block;font-size:28px;line-height:1.1}
+.stat span{font-size:13px;color:var(--mut)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
+.chip{border:1px solid var(--bd);background:#fff;border-radius:20px;padding:6px 12px;white-space:nowrap;cursor:pointer;font-size:13px}
+.chip.on{background:var(--c);border-color:var(--c);color:#fff}
+.bon{cursor:pointer;position:relative}
+.bon .t{font-weight:700}
+.bon .adr{font-size:14px}
+.bon.urgent{border-left:5px solid var(--err)}
+.bon.nouveau{border-left:5px solid var(--warn)}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+/* Modal */
+.ov{position:fixed;inset:0;background:#0007;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--bg);width:100%;max-width:760px;max-height:94vh;overflow:auto;border-radius:16px 16px 0 0;padding:0 0 20px}
+@media(min-width:760px){.ov{align-items:center}.modal{border-radius:16px}}
+.mh{position:sticky;top:0;background:var(--c);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px;z-index:2}
+.mh h2{margin:0;font-size:16px;flex:1}
+.mh button{background:#ffffff22;border:0;color:#fff;border-radius:8px;padding:6px 12px;font-size:16px;cursor:pointer}
+.mb{padding:12px}
+/* Login */
+.login{max-width:340px;margin:8vh auto;text-align:center;padding:0 16px}
+.login h1{color:var(--c);margin:0 0 4px}
+.dots{display:flex;justify-content:center;gap:12px;margin:22px 0}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--c)}
+.dots i.f{background:var(--c)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pad button{padding:16px;font-size:22px;border-radius:14px;border:1px solid var(--bd);background:#fff;cursor:pointer}
+.pad button:active{background:var(--c2)}
+/* Bottom nav compagnon */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:30}
+.bnav button{flex:1;border:0;background:none;padding:10px 4px 12px;color:var(--mut);font-size:12px;cursor:pointer;position:relative}
+.bnav button.on{color:var(--c);font-weight:700}
+.bnav .ic{font-size:22px;display:block}
+.badge{position:absolute;top:4px;left:55%;background:var(--err);color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;font-weight:700}
+/* Photos & signature */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:8px}
+.photos div{position:relative}
+.photos img{width:100%;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)}
+.photos button{position:absolute;top:3px;right:3px;background:#000a;color:#fff;border:0;border-radius:50%;width:24px;height:24px;cursor:pointer}
+.photos input{width:100%;font-size:11px;padding:3px;margin-top:2px;border:1px solid var(--bd);border-radius:6px}
+canvas.sig{width:100%;height:180px;background:#fff;border:2px dashed var(--bd);border-radius:10px;touch-action:none}
+.seg{display:flex;border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.seg label{flex:1;margin:0;text-align:center;padding:10px 4px;cursor:pointer;background:#fff;color:var(--txt);font-weight:600;font-size:13px;border-right:1px solid var(--bd)}
+.seg label:last-child{border-right:0}
+.seg input{display:none}
+.seg input:checked+span{color:#fff}
+.seg label.on{background:var(--c);color:#fff}
+/* Planning */
+.plan{overflow-x:auto}
+.plan table{border-collapse:collapse;min-width:820px;width:100%;background:#fff}
+.plan th,.plan td{border:1px solid var(--bd);padding:6px;vertical-align:top;font-size:12.5px}
+.plan th{background:var(--c2);position:sticky;top:0}
+.plan td.nm{font-weight:700;white-space:nowrap;width:110px}
+.plan .it{background:var(--c2);border-left:4px solid var(--c);border-radius:6px;padding:4px 6px;margin-bottom:4px;cursor:pointer}
+.plan .it.urg{border-left-color:var(--err)}
+.plan td.today{background:#fffde7}
+/* Toast */
+#offbar{position:sticky;top:0;z-index:21;background:#424242;color:#fff;padding:8px 12px;font-size:13px}
+#toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;z-index:99;max-width:90%;text-align:center;opacity:0;transition:.25s;pointer-events:none}
+#toast.on{opacity:1}
+#load{position:fixed;inset:0;background:#fff8;z-index:98;display:flex;align-items:center;justify-content:center}
+.spin{width:42px;height:42px;border:4px solid var(--c2);border-top-color:var(--c);border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.banner{background:#fff3e0;border:1px solid #ffcc80;color:#8a4b00;padding:10px 12px;border-radius:10px;margin-bottom:10px}
+.drop{border:2px dashed var(--c);border-radius:var(--r);padding:30px 10px;text-align:center;background:#fff;cursor:pointer}
+.drop.over{background:var(--c2)}
+pre.txtbon{white-space:pre-wrap;font:12.5px/1.4 ui-monospace,Consolas,monospace;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px;max-height:320px;overflow:auto}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:14px}
+.kv div:nth-child(odd){color:var(--mut)}
+.fab{position:fixed;right:18px;bottom:22px;z-index:25;border-radius:30px;padding:14px 20px;box-shadow:0 4px 14px #0004}
+.list-check{width:20px;height:20px;margin:0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<div id="load" class="hide"><div class="spin"></div></div>
+
+<script>
+/* ============================================================
+   MISSIONS CHANTIER – interface (bureau + compagnons)
+   Propriétaire : Guillaume Richard – reproduction interdite.
+   ============================================================ */
+const STATUTS = ['À attribuer','Attribué','En cours','À poursuivre','Terminé','Facturé','Annulé'];
+const S = { pin: '', user: null, data: null, tab: 'accueil', filtre: 'actifs', fComp: '', q: '', semaine: lundi(new Date()), sel: {} };
+
+/* ---------- utilitaires ---------- */
+/* Stockage du téléphone : copie en mémoire + IndexedDB (gros volumes : photos, PDF) */
+const MEM={}; let _db=null;
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open('missions',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbLoad(){ try{ _db=await idbOpen(); await new Promise((res)=>{ const tx=_db.transaction('kv','readonly'); const st=tx.objectStore('kv'); const rq=st.openCursor(); rq.onsuccess=()=>{ const c=rq.result; if(c){ MEM[c.key]=c.value; c.continue(); } else res(); }; rq.onerror=()=>res(); }); }catch(e){ /* navigateur sans IndexedDB : mémoire seule */ } }
+function idbPut(k,v){ if(!_db) return; try{ const tx=_db.transaction('kv','readwrite'); if(v===null) tx.objectStore('kv').delete(k); else tx.objectStore('kv').put(v,k); }catch(e){} }
+function lsGet(k){ return MEM['mc_'+k]===undefined?null:MEM['mc_'+k]; }
+function lsSet(k,v){ if(v===null) delete MEM['mc_'+k]; else MEM['mc_'+k]=String(v); idbPut('mc_'+k,v===null?null:String(v)); return true; }
+try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+function $(s,r){ return (r||document).querySelector(s); }
+function $$(s,r){ return Array.from((r||document).querySelectorAll(s)); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function today(){ return iso(new Date()); }
+function hhmm(d){ d=d||new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function fr(isoStr){ const m=String(isoStr||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m? m[3]+'/'+m[2]+'/'+m[1].slice(2) : (isoStr||''); }
+function jourFr(isoStr){ const d=new Date(isoStr+'T12:00'); return isNaN(d)?'':d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}); }
+function lundi(d){ d=new Date(d); const j=(d.getDay()+6)%7; d.setDate(d.getDate()-j); d.setHours(12,0,0,0); return d; }
+function stCls(s){ return 'st-'+String(s||'').replace(/\s+/g,'-'); }
+function pill(s){ return '<span class="pill '+stCls(s)+'">'+esc(s)+'</span>'; }
+function toast(m,ms){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),ms||2600); }
+function busy(on){ $('#load').classList.toggle('hide',!on); }
+function comp(id){ return (S.data&&S.data.compagnons||[]).find(c=>c.id===id); }
+function compNom(id){ const c=comp(id); return c?c.nom:''; }
+function telLink(t){ return 'tel:'+String(t||'').replace(/[^\d+]/g,''); }
+function adrGps(b){ return ((b.adresse||'').replace(/\s+–.*$/,'')+' '+(b.ville||'')).trim(); }
+function mapsLink(b){ return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(adrGps(b)); }
+function wazeLink(b){ return 'https://waze.com/ul?navigate=yes&q='+encodeURIComponent(adrGps(b)); }
+function telsHtml(txt){ return esc(txt).replace(/((?:\+33\s?|0)[1-9](?:[\s.\-]?\d{2}){4})/g,function(t){ return '<a href="tel:'+t.replace(/[^\d+]/g,'')+'" onclick="event.stopPropagation()">'+t+'</a>'; }); }
+function garderCopie(){}
+function ouvrirBon(id){
+  const b=S.data.bons.find(x=>x.id===id); if(!b) return;
+  let p=null; try{ p=JSON.parse(lsGet('pdf_'+id)||'null'); }catch(e){}
+  if(p&&p.b64){
+    const bin=atob(p.b64); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([u],{type:'application/pdf'}));
+    const a=document.createElement('a'); a.href=url; a.download=(p.nom||('Bon '+(b.numero||'')+'.pdf')).replace(/[\\/:*?"<>|]/g,'-'); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000); return;
+  }
+  if(navigator.onLine&&b.fichierBonUrl) window.open(b.fichierBonUrl,'_blank');
+  else toast('📶 Le PDF du bon n\'a pas encore été chargé dans le téléphone (il le sera au prochain passage avec du réseau). Le texte du bon est en bas de la mission.',6000);
+}
+function enRetard(b){ return b.dateLimite && b.dateLimite<today() && ['Terminé','Facturé','Annulé'].indexOf(b.statut)<0; }
+
+function apiUrl(){ return lsGet('api')||''; }
+async function api(fn,...args){
+  if(!apiUrl()) throw new Error('Appli non configurée : ouvre le lien d\'installation envoyé par le bureau');
+  if(!navigator.onLine) throw new Error('Hors connexion');
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),fn==='envoyerRapport'?180000:45000);
+  let r;
+  try{ r=await fetch(apiUrl(),{method:'POST',body:JSON.stringify({rpc:fn,args}),headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow',signal:ctl.signal}); }
+  catch(e){ throw new Error('Hors connexion (réseau)'); }
+  finally{ clearTimeout(to); }
+  let j; try{ j=await r.json(); }catch(e){ throw new Error('Hors connexion (réponse illisible)'); }
+  if(!j.ok) throw new Error(j.erreur||'Erreur');
+  return j.result;
+}
+async function call(fn,...args){
+  busy(true);
+  try{ return await api(fn,...args); }
+  catch(e){ toast('⚠️ '+(e.message||e),4000); throw e; }
+  finally{ busy(false); }
+}
+function applyColor(){ const c=S.data&&S.data.config&&S.data.config.COULEUR; if(c){ document.documentElement.style.setProperty('--c',c); } }
+
+/* ---------- démarrage ---------- */
+function garderCopie(){ try{ lsSet('copie',JSON.stringify({t:Date.now(),data:S.data})); }catch(e){} }
+function copieLocale(){ try{ return JSON.parse(lsGet('copie')||'null'); }catch(e){ return null; } }
+function bandeauHorsLigne(){
+  const el=document.getElementById('offbar'); if(!el) return;
+  const c=copieLocale(); const off=S.horsLigne;
+  el.className=off?'':'hide';
+  el.innerHTML=off?'📶 <b>Sans réseau</b> – missions du '+(c?new Date(c.t).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'}):'?')+'. Tout fonctionne : les rapports partiront au retour du réseau.':'';
+}
+async function chargerPdfs(){ /* garde dans le téléphone le PDF de chaque mission ouverte */
+  if(!S.data||!S.user||S.user.role==='admin') return;
+  for(const b of S.data.bons.filter(x=>['Attribué','En cours','À poursuivre'].indexOf(x.statut)>=0&&x.fichierBonId)){
+    if(lsGet('pdf_'+b.id)) continue;
+    try{ const p=await api('bonPdf',S.pin,b.id); if(p&&p.b64) lsSet('pdf_'+b.id,JSON.stringify(p)); }catch(e){ break; }
+  }
+  /* nettoyage des PDF des missions terminées */
+  Object.keys(MEM).filter(k=>k.indexOf('mc_pdf_')===0).forEach(k=>{ const id=k.slice(7); if(!S.data.bons.some(b=>b.id===id&&['Attribué','En cours','À poursuivre'].indexOf(b.statut)>=0)) lsSet('pdf_'+id,null); });
+}
+async function boot(){
+  if(!apiUrl()){ renderNonConfig(); return; }
+  if(!S.pin){ renderLogin(); return; }
+  try{
+    busy(true);
+    S.data = await api('getData',S.pin);
+    S.user = S.data.user; S.horsLigne=false;
+    garderCopie(); applyColor(); render(); bandeauHorsLigne();
+    envoyerFileAttente(); chargerPdfs();
+  }catch(e){
+    busy(false);
+    if(/PIN/.test(e.message)){ lsSet('pin',null); S.pin=''; renderLogin(); toast('Code PIN refusé'); return; }
+    const c=copieLocale();
+    if(c&&c.data){ S.data=c.data; S.user=c.data.user; S.horsLigne=true; applyColor(); render(); bandeauHorsLigne(); }
+    else renderHorsLigne(e.message);
+    return;
+  }
+  busy(false);
+}
+async function refresh(silent){
+  try{ if(!silent) busy(true); S.data=await api('getData',S.pin); S.user=S.data.user; S.horsLigne=false; garderCopie(); applyColor(); render(); bandeauHorsLigne(); chargerPdfs(); }
+  catch(e){ if(/Hors connexion/.test(e.message)){ S.horsLigne=true; bandeauHorsLigne(); if(!silent) toast('📶 Pas de réseau : tu travailles sur la copie du téléphone'); } else toast('⚠️ '+e.message); }
+  finally{ busy(false); }
+}
+function renderNonConfig(){
+  $('#app').innerHTML='<div class="login"><h1>🔧 Missions</h1><p>Cette appli doit être ouverte une première fois avec le <b>lien d\'installation</b> envoyé par le bureau (par WhatsApp ou SMS).</p><p class="mut">Ouvre ce lien sur ce téléphone, avec du réseau.</p></div>';
+}
+window.addEventListener('online',async()=>{ toast('📶 Réseau retrouvé'); await envoyerFileAttente(); refresh(true); });
+window.addEventListener('offline',()=>{ S.horsLigne=true; bandeauHorsLigne(); });
+setInterval(()=>{ if(navigator.onLine&&S.pin&&apiUrl()) refresh(true); },120000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&navigator.onLine&&S.pin&&apiUrl()){ envoyerFileAttente(); refresh(true); } });
+setInterval(()=>{ if(fileAttente().length&&navigator.onLine) envoyerFileAttente(); },60000);
+
+function renderHorsLigne(msg){
+  $('#app').innerHTML='<div class="login"><h1>📶</h1><p>Impossible de joindre le serveur.</p><p class="mut">'+esc(msg)+'</p>'+
+    (fileAttente().length?'<div class="banner">'+fileAttente().length+' rapport(s) en attente d\'envoi sur ce téléphone.</div>':'')+
+    '<button class="btn full" onclick="boot()">Réessayer</button></div>';
+}
+
+/* ---------- connexion ---------- */
+let saisie='';
+function renderLogin(){
+  saisie='';
+  $('#app').innerHTML='<div class="login"><h1>🔧 Missions</h1><div class="mut">Entre ton code PIN</div>'+
+   '<div class="dots" id="dots"></div><div class="pad">'+
+   [1,2,3,4,5,6,7,8,9,'⌫',0,'OK'].map(k=>'<button onclick="padKey(\''+k+'\')">'+k+'</button>').join('')+'</div></div>';
+  drawDots();
+}
+function drawDots(){ const n=Math.max(4,saisie.length); $('#dots').innerHTML=Array.from({length:n},(_,i)=>'<i class="'+(i<saisie.length?'f':'')+'"></i>').join(''); }
+async function padKey(k){
+  if(k==='⌫'){ saisie=saisie.slice(0,-1); drawDots(); return; }
+  if(k==='OK'){
+    if(saisie.length<4) return toast('4 chiffres minimum');
+    try{ S.user=await call('login',saisie); S.pin=saisie; lsSet('pin',saisie); S.tab=S.user.role==='admin'?'accueil':'missions'; boot(); }
+    catch(e){ saisie=''; drawDots(); }
+    return;
+  }
+  if(saisie.length<8){ saisie+=k; drawDots(); }
+}
+function logout(){ if(!confirm('Se déconnecter de ce téléphone ?')) return; lsSet('pin',null); S.pin=''; S.user=null; S.data=null; renderLogin(); }
+
+/* ---------- rendu principal ---------- */
+function render(){
+  if(!S.user) return renderLogin();
+  if(S.user.role==='admin') renderAdmin(); else renderCompagnon();
+}
+function header(extra){
+  return '<div id="offbar" class="'+(S.horsLigne?'':'hide')+'"></div><header><h1>'+esc(S.data.config.NOM_ENTREPRISE||'Missions')+'</h1><span class="who">'+esc(S.user.nom)+'</span>'+(extra||'')+
+   '<button onclick="refresh()" title="Actualiser">⟳</button><button onclick="logout()" title="Déconnexion">⎋</button></header>';
+}
+
+/* ======================= BUREAU ======================= */
+function renderAdmin(){
+  const tabs=[['accueil','Tableau de bord'],['bons','Bons'],['planning','Planning'],['equipe','Équipe'],['reglages','Réglages']];
+  let h=header()+'<nav class="tabs">'+tabs.map(t=>'<button class="'+(S.tab===t[0]?'on':'')+'" onclick="S.tab=\''+t[0]+'\';render()">'+t[1]+'</button>').join('')+'</nav><main id="main"></main>'+
+    '<button class="btn fab" onclick="ouvrirImport()">＋ Importer des bons</button>';
+  $('#app').innerHTML=h;
+  ({accueil:vAccueil,bons:vBons,planning:vPlanning,equipe:vEquipe,reglages:vReglages}[S.tab]||vAccueil)();
+}
+
+function compte(f){ return S.data.bons.filter(f).length; }
+function vAccueil(){
+  const B=S.data.bons, mois=today().slice(0,7);
+  const tiles=[
+    ['À attribuer',compte(b=>b.statut==='À attribuer'),'#c62828','À attribuer'],
+    ['Attribués',compte(b=>b.statut==='Attribué'),'#0d47a1','Attribué'],
+    ['En cours',compte(b=>b.statut==='En cours'),'#e65100','En cours'],
+    ['À poursuivre',compte(b=>b.statut==='À poursuivre'),'#8d6e00','À poursuivre'],
+    ['À facturer',compte(b=>b.statut==='Terminé'),'#1b5e20','Terminé'],
+    ['Facturés ce mois',compte(b=>b.statut==='Facturé'&&(b.dateFin||b.majLe||'').slice(0,7)===mois),'#455a64','Facturé'],
+    ['En retard',compte(enRetard),'#b71c1c','retard']
+  ];
+  let h='<div class="stats">'+tiles.map(t=>'<div class="stat" onclick="S.tab=\'bons\';S.filtre=\''+t[3]+'\';render()"><b style="color:'+t[2]+'">'+t[1]+'</b><span>'+t[0]+'</span></div>').join('')+'</div>';
+
+  const prio=B.filter(b=>b.statut==='À attribuer'||enRetard(b)||(b.urgent==='OUI'&&['Terminé','Facturé','Annulé'].indexOf(b.statut)<0))
+    .sort((a,b)=>(b.urgent==='OUI')-(a.urgent==='OUI')||String(a.dateLimite||'9').localeCompare(String(b.dateLimite||'9')));
+  h+='<h3>À traiter en priorité</h3>'+(prio.length?prio.map(carteBonAdmin).join(''):'<div class="card empty">Rien d\'urgent 👌</div>');
+
+  const auj=B.filter(b=>b.datePrevue===today()&&['Annulé','Facturé'].indexOf(b.statut)<0);
+  h+='<h3>Prévu aujourd\'hui ('+auj.length+')</h3>'+(auj.length?auj.map(carteBonAdmin).join(''):'<div class="card empty">Aucune intervention planifiée aujourd\'hui</div>');
+
+  // charge par compagnon
+  const comps=S.data.compagnons.filter(c=>c.actif!=='NON'&&c.role!=='admin');
+  if(comps.length){
+    h+='<h3>Charge par compagnon</h3><div class="card">'+comps.map(c=>{
+      const n=compte(b=>b.compagnonId===c.id&&['Attribué','En cours','À poursuivre'].indexOf(b.statut)>=0);
+      return '<div class="row" style="padding:4px 0"><span class="grow"><b>'+esc(c.nom)+'</b></span><span class="mut">'+n+' mission(s) ouverte(s)</span></div>';
+    }).join('')+'</div>';
+  }
+  $('#main').innerHTML=h;
+}
+
+function carteBonAdmin(b){
+  const c=comp(b.compagnonId);
+  const chk=b.statut==='Terminé'?'<input type="checkbox" class="list-check" '+(S.sel[b.id]?'checked':'')+' onclick="event.stopPropagation();S.sel[\''+b.id+'\']=this.checked;majSel()">':'';
+  return '<div class="card bon '+(b.urgent==='OUI'||enRetard(b)?'urgent':'')+'" onclick="editBon(\''+b.id+'\')">'+
+    '<div class="row">'+chk+'<span class="t grow">'+esc(b.numero||'(sans n°)')+(b.donneurOrdre?' <span class="mut">· '+esc(b.donneurOrdre)+'</span>':'')+'</span>'+
+    (b.urgent==='OUI'?'<span class="pill urg">URGENT</span>':'')+(enRetard(b)?'<span class="pill urg">Retard</span>':'')+pill(b.statut)+
+    '<button class="btn sec sm" title="Supprimer ce bon" style="padding:4px 8px" onclick="event.stopPropagation();supprimerBon(\''+b.id+'\')">🗑</button></div>'+
+    '<div class="adr"><a href="'+mapsLink(b)+'" target="_blank" onclick="event.stopPropagation()">📍 '+esc(b.adresse)+' '+esc(b.ville)+'</a></div>'+
+    '<div class="mut">'+esc((b.objet||'').slice(0,140))+'</div>'+
+    '<div class="row mut" style="margin-top:4px">'+
+      (c?'<span>👷 '+esc(c.nom)+'</span>':'<span style="color:var(--err)">👷 non attribué</span>')+
+      (b.datePrevue?'<span>📅 '+jourFr(b.datePrevue)+(b.creneau?' '+esc(b.creneau):'')+'</span>':'')+
+      (b.dateLimite?'<span>⏳ limite '+fr(b.dateLimite)+'</span>':'')+
+      (b.compagnonId&&!b.vu&&b.statut==='Attribué'?'<span>👁 pas encore vu</span>':'')+
+      (lignesDe(b).length?'<span>🧾 '+lignesDe(b).length+' réf.</span>':'')+
+      (b.exporteLe?'<span>📤 exporté Sage</span>':'')+
+    '</div>'+
+    (b.statut==='À attribuer'?attribRapide(b):'')+
+  '</div>';
+}
+function attribRapide(b){
+  const comps=S.data.compagnons.filter(c=>c.actif!=='NON');
+  return '<div class="row" style="margin-top:8px" onclick="event.stopPropagation()">'+
+    '<select id="qa_c_'+b.id+'" style="flex:2;min-width:140px"><option value="">— Compagnon —</option>'+comps.map(c=>'<option value="'+c.id+'">'+esc(c.nom)+'</option>').join('')+'</select>'+
+    '<input type="date" id="qa_d_'+b.id+'" value="'+today()+'" style="flex:1;min-width:130px">'+
+    '<button class="btn sm" onclick="attribuer(\''+b.id+'\')">Attribuer</button></div>';
+}
+async function attribuer(id){
+  const c=$('#qa_c_'+id).value, d=$('#qa_d_'+id).value;
+  if(!c) return toast('Choisis un compagnon');
+  await call('saveBon',S.pin,{id,compagnonId:c,datePrevue:d,statut:'Attribué'});
+  toast('Attribué à '+compNom(c)); refresh(true);
+}
+
+function vBons(){
+  const B=S.data.bons;
+  const filtres=[['actifs','Ouverts',b=>['Terminé','Facturé','Annulé'].indexOf(b.statut)<0],['tous','Tous',b=>true],['retard','En retard',enRetard]]
+    .concat(STATUTS.map(s=>[s,s,b=>b.statut===s]));
+  const f=(filtres.find(x=>x[0]===S.filtre)||filtres[0])[2];
+  const q=S.q.toLowerCase();
+  let L=B.filter(f).filter(b=>!S.fComp||b.compagnonId===S.fComp||(S.fComp==='_'&&!b.compagnonId))
+    .filter(b=>!q||[b.numero,b.adresse,b.ville,b.locataire,b.objet,b.donneurOrdre,b.fichierOrigine].join(' ').toLowerCase().indexOf(q)>=0)
+    .sort((a,b)=>(b.urgent==='OUI')-(a.urgent==='OUI')||String(b.dateReception).localeCompare(String(a.dateReception)));
+  let h='<div class="chips">'+filtres.map(x=>'<span class="chip '+(S.filtre===x[0]?'on':'')+'" onclick="S.filtre=\''+x[0]+'\';vBons()">'+esc(x[1])+' ('+B.filter(x[2]).length+')</span>').join('')+'</div>'+
+   '<div class="row" style="margin-bottom:10px"><input type="text" class="grow" placeholder="🔎 N° de bon, n° de fichier, adresse, locataire…" value="'+esc(S.q)+'" oninput="S.q=this.value;clearTimeout(window._qt);window._qt=setTimeout(()=>{vBons();const i=$(\'#main input[type=text]\');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">'+
+   '<select style="width:auto" onchange="S.fComp=this.value;vBons()"><option value="">Tous compagnons</option><option value="_" '+(S.fComp==='_'?'selected':'')+'>Non attribués</option>'+S.data.compagnons.map(c=>'<option value="'+c.id+'" '+(S.fComp===c.id?'selected':'')+'>'+esc(c.nom)+'</option>').join('')+'</select>'+
+   '<button class="btn sec sm" onclick="editBon()">＋ Bon manuel</button>'+
+   (S.filtre==='Terminé'?'<button class="btn sec sm" onclick="toutSelTermines()">☑ Sélectionner les non exportés</button>':'')+'</div>'+
+   '<div id="selbar"></div>';
+  h+=L.length?L.map(carteBonAdmin).join(''):'<div class="card empty">Aucun bon</div>';
+  $('#main').innerHTML=h; majSel();
+}
+function majSel(){
+  const ids=Object.keys(S.sel).filter(k=>S.sel[k]);
+  const el=$('#selbar'); if(!el) return;
+  el.innerHTML=ids.length?'<div class="banner row"><span class="grow">'+ids.length+' bon(s) sélectionné(s)</span><button class="btn sm" onclick="exporterSel()">📤 Export Sage</button><button class="btn sm ok" onclick="facturerSel()">Marquer facturé(s)</button><button class="btn sec sm" onclick="S.sel={};vBons()">Annuler</button></div>':'';
+}
+async function exporterSel(){
+  const ids=Object.keys(S.sel).filter(k=>S.sel[k]); if(!ids.length) return;
+  const r=await call('exportSage',S.pin,ids,true);
+  try{ const a=document.createElement('a'); a.href='data:text/csv;base64,'+r.b64; a.download=r.nom; document.body.appendChild(a); a.click(); a.remove(); }catch(e){}
+  modal('Export Sage','<div class="mb"><div class="card">✅ <b>'+r.nbBons+' bon(s)</b> – '+r.nbLignes+' ligne(s) de prestations.<br><span class="mut">Fichier CSV (séparateur « ; »), sans aucun prix : Sage applique les tarifs de sa bibliothèque à partir des références.</span></div>'+
+    '<a class="btn full" href="'+esc(r.url)+'" target="_blank">📄 Ouvrir / télécharger le fichier (Drive › Exports Sage)</a></div>');
+  refresh(true);
+}
+function toutSelTermines(){ S.data.bons.filter(b=>b.statut==='Terminé'&&!b.exporteLe).forEach(b=>S.sel[b.id]=true); vBons(); }
+async function facturerSel(){
+  const ids=Object.keys(S.sel).filter(k=>S.sel[k]); if(!ids.length) return;
+  await call('setStatut',S.pin,ids,'Facturé'); S.sel={}; toast(ids.length+' bon(s) facturé(s)'); refresh(true);
+}
+
+/* --- lignes de prestations (codes BPU / références Sage) – jamais de prix --- */
+function lignesDe(b){ try{ return JSON.parse(b.lignes||'[]'); }catch(e){ return []; } }
+function bpuOptions(){ return '<datalist id="dl_bpu">'+(S.data.bpu||[]).map(x=>'<option value="'+esc(x.c)+'">'+esc(x.d)+(x.u?' ('+esc(x.u)+')':'')+'</option>').join('')+'</datalist>'; }
+function bpuTrouve(code){ code=String(code||'').trim().toUpperCase(); return (S.data.bpu||[]).find(x=>String(x.c).trim().toUpperCase()===code); }
+function editeurLignes(L,id,mode){ /* mode 'bureau' : qté commandée + réalisée ; 'compagnon' : qté réalisée */
+  window['_L_'+id]=L;
+  let h='<div id="lg_'+id+'" data-mode="'+(mode||'')+'">'+(L.length?'':'<div class="mut" style="padding:6px 0">Aucune ligne. Ajoute les références réalisées.</div>');
+  L.forEach((l,i)=>{
+    h+='<div class="card" style="padding:8px;margin-bottom:6px;background:#fafbfc"><div class="row">'+
+      '<input type="text" list="dl_bpu" placeholder="Référence" value="'+esc(l.code)+'" style="width:120px;flex:0 0 120px" onchange="lgSet(\''+id+'\','+i+',\'code\',this.value,true)">'+
+      '<input type="text" placeholder="Désignation" value="'+esc(l.des)+'" class="grow" style="min-width:140px" oninput="lgSet(\''+id+'\','+i+',\'des\',this.value)">'+
+      '<button class="btn sec sm" onclick="lgDel(\''+id+'\','+i+')">✕</button></div>'+
+      '<div class="row" style="margin-top:6px">'+
+      (mode==='bureau'?'<span class="mut">Cdé</span><input type="number" step="any" min="0" value="'+esc(l.qteCde)+'" style="width:80px" oninput="lgSet(\''+id+'\','+i+',\'qteCde\',this.value)">':(l.qteCde?'<span class="mut">Commandé : '+esc(l.qteCde)+' '+esc(l.unite)+'</span>':''))+
+      '<span class="mut" style="margin-left:auto">Réalisé</span><button class="btn sec sm" onclick="lgPas(\''+id+'\','+i+',-1)">−</button>'+
+      '<input type="number" step="any" min="0" id="lgq_'+id+'_'+i+'" value="'+esc(l.qte)+'" style="width:80px;text-align:center;font-weight:700" oninput="lgSet(\''+id+'\','+i+',\'qte\',this.value)">'+
+      '<button class="btn sec sm" onclick="lgPas(\''+id+'\','+i+',1)">＋</button><span class="mut">'+esc(l.unite||'')+'</span></div></div>';
+  });
+  h+='<div class="row" style="margin-top:4px"><input type="text" list="dl_bpu" id="lgadd_'+id+'" class="grow" placeholder="＋ Ajouter : tape une référence ou un mot (ex. siphon)" oninput="lgCherche(\''+id+'\',this.value)" onkeydown="if(event.key===\'Enter\'){lgAdd(\''+id+'\',this.value)}"><button class="btn sm" onclick="lgAdd(\''+id+'\',$(\'#lgadd_'+id+'\').value)">Ajouter</button></div>'+
+    '<div id="lgres_'+id+'"></div></div>';
+  return h;
+}
+function lgRedraw(id){ const el=$('#lg_'+id); if(!el) return; const mode=el.dataset.mode; el.outerHTML=editeurLignes(window['_L_'+id],id,mode); $('#lg_'+id).dataset.mode=mode; if(window._lgChange) window._lgChange(id); }
+function lgSet(id,i,k,v,redraw){ const L=window['_L_'+id]; L[i][k]=v; if(k==='code'){ const x=bpuTrouve(v); if(x){ L[i].des=x.d; L[i].unite=x.u||''; } } if(redraw) lgRedraw(id); else if(window._lgChange) window._lgChange(id); }
+function lgPas(id,i,d){ const L=window['_L_'+id]; let q=parseFloat(String(L[i].qte||'0').replace(',','.'))||0; q=Math.max(0,Math.round((q+d)*100)/100); L[i].qte=String(q); $('#lgq_'+id+'_'+i).value=q; if(window._lgChange) window._lgChange(id); }
+function lgDel(id,i){ window['_L_'+id].splice(i,1); lgRedraw(id); }
+function lgCherche(id,q){
+  const el=$('#lgres_'+id); q=String(q||'').trim().toLowerCase(); if(q.length<2){ el.innerHTML=''; return; }
+  const R=(S.data.bpu||[]).filter(x=>(x.c+' '+x.d).toLowerCase().indexOf(q)>=0).slice(0,8);
+  el.innerHTML=R.map(x=>'<div class="card" style="padding:8px;margin:4px 0;cursor:pointer" onclick="lgAdd(\''+id+'\',\''+esc(x.c).replace(/'/g,"\\'")+'\')"><b>'+esc(x.c)+'</b> – '+esc(x.d)+(x.u?' <span class="mut">('+esc(x.u)+')</span>':'')+'</div>').join('');
+}
+function lgAdd(id,v){
+  v=String(v||'').trim(); if(!v) return;
+  const x=bpuTrouve(v);
+  window['_L_'+id].push(x?{code:x.c,des:x.d,unite:x.u||'',qteCde:'',qte:'1'}:{code:'',des:v,unite:'',qteCde:'',qte:'1'});
+  lgRedraw(id);
+}
+
+/* --- fiche bon (bureau) --- */
+async function editBon(id){
+  const b=id?Object.assign({},S.data.bons.find(x=>x.id===id)):{statut:'À attribuer',dateReception:today()};
+  const comps=S.data.compagnons.filter(c=>c.actif!=='NON'||c.id===b.compagnonId);
+  const f=(k,l,t,extra)=>'<div><label>'+l+'</label><input type="'+(t||'text')+'" id="f_'+k+'" value="'+esc(b[k]||'')+'" '+(extra||'')+'></div>';
+  let h='<div class="mb">'+
+   (b.fichierBonUrl?'<div class="row" style="margin-bottom:6px"><a class="btn sec sm" href="'+esc(b.fichierBonUrl)+'" target="_blank">📄 Voir le bon d\'origine</a>'+(b.rapportPdfUrl?'<a class="btn sec sm" href="'+esc(b.rapportPdfUrl)+'" target="_blank">✅ Dernier rapport</a>':'')+(b.dossierUrl?'<a class="btn sec sm" href="'+esc(b.dossierUrl)+'" target="_blank">📁 Dossier du bon</a>':'')+'</div>':'')+
+   '<div class="card"><b>Attribution</b><div class="grid2">'+
+     '<div><label>Compagnon</label><select id="f_compagnonId"><option value="">— Non attribué —</option>'+comps.map(c=>'<option value="'+c.id+'" '+(c.id===b.compagnonId?'selected':'')+'>'+esc(c.nom)+'</option>').join('')+'</select></div>'+
+     '<div><label>Statut</label><select id="f_statut">'+STATUTS.map(s=>'<option '+(s===b.statut?'selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
+     f('datePrevue','Date prévue','date')+
+     '<div><label>Créneau</label><input type="text" id="f_creneau" list="creneaux" value="'+esc(b.creneau||'')+'" placeholder="Matin, 14h…"><datalist id="creneaux"><option>Matin<option>Après-midi<option>Journée<option>8h-12h<option>8h-10h<option>10h-12h<option>13h-16h<option>13h-17h<option>14h-16h<option>16h-18h</datalist></div>'+
+   '</div></div>'+
+   '<div class="card"><b>Bon</b> <span class="mut">– vérifie ce qui a été lu automatiquement'+(b.fichierOrigine?' · fichier extranet : '+esc(b.fichierOrigine):'')+'</span><div class="grid2">'+
+     f('numero','N° de bon')+f('donneurOrdre','Donneur d\'ordre','text','list="dl_donneurs" placeholder="Angers Loire Habitat, Particulier…"')+'<datalist id="dl_donneurs">'+((S.data.config.DONNEURS||[]).map(d=>'<option value="'+esc(d)+'">').join(''))+'</datalist>'+
+     f('adresse','Adresse')+f('ville','CP / Ville')+
+     f('locataire','Locataire / occupant')+f('telLocataire','Téléphone','tel')+
+     '<div style="grid-column:1/-1"><label>Autre contact (nom + téléphone)</label><input type="text" id="f_contact2" value="'+esc(b.contact2||'')+'" placeholder="Gardien M. Martin 06 12 34 56 78"></div>'+
+     f('dateLimite','Date limite','date')+
+     '<div><label>Urgent</label><select id="f_urgent"><option value="">Non</option><option value="OUI" '+(b.urgent==='OUI'?'selected':'')+'>OUI</option></select></div>'+
+   '</div>'+
+   '<label>Objet</label><input type="text" id="f_objet" value="'+esc(b.objet||'')+'">'+
+   '<label>Description / travaux demandés</label><textarea id="f_description">'+esc(b.description||'')+'</textarea>'+
+   '</div>'+
+   '<div class="card"><b>Prestations (références BPU / Sage)</b> <span class="mut">– sans prix : Sage applique les tarifs de sa bibliothèque</span>'+bpuOptions()+editeurLignes(lignesDe(b),'adm','bureau')+'</div>'+
+   '<div class="card">'+
+   '<label style="margin-top:0">Accès (codes, clés, gardien…)</label><input type="text" id="f_acces" value="'+esc(b.acces||'')+'">'+
+   '<label>Notes bureau (non visibles par le compagnon)</label><textarea id="f_notesBureau" style="min-height:50px">'+esc(b.notesBureau||'')+'</textarea>'+
+   '</div>'+
+   (b.texteBon?'<details class="card"><summary><b>Texte complet du bon</b></summary><pre class="txtbon">'+esc(b.texteBon)+'</pre></details>':'')+
+   (id?'<div id="rapList" class="card mut">Chargement des rapports…</div>':'')+
+   '<div class="row"><button class="btn grow" onclick="saveBonForm(\''+(id||'')+'\')">Enregistrer</button>'+
+   (id&&b.statut==='Terminé'?'<button class="btn ok" onclick="$(\'#f_statut\').value=\'Facturé\';saveBonForm(\''+id+'\')">Facturé</button>':'')+
+   (id?'<button class="btn err" onclick="supprimerBon(\''+id+'\')">🗑 Supprimer</button>':'')+'</div>'+
+  '</div>';
+  modal(id?('Bon '+(b.numero||'')):'Nouveau bon', h);
+  $('#lg_adm').dataset.mode='bureau'; window._lgChange=null;
+  if(id){
+    try{
+      const R=await api('getRapports',S.pin,id);
+      $('#rapList').innerHTML='<b style="color:var(--txt)">Rapports ('+R.length+')</b>'+(R.length?R.map(r=>'<div class="row" style="padding:6px 0;border-top:1px solid var(--bd)"><span class="grow">'+fr(r.dateIntervention)+' – '+esc(r.compagnonNom)+' – '+pill(r.finIntervention==='Terminée'?'Terminé':'À poursuivre')+'<br><span class="mut">'+esc((r.travaux||'').slice(0,120))+'</span></span><a class="btn sec sm" href="'+esc(r.pdfUrl)+'" target="_blank">PDF</a></div>').join(''):'<div>Aucun rapport pour l\'instant.</div>');
+    }catch(e){ $('#rapList').textContent=''; }
+  }
+}
+async function supprimerBon(id){
+  const b=S.data.bons.find(x=>x.id===id); if(!b) return;
+  if(!confirm('Supprimer le bon '+(b.numero||'')+' – '+(b.adresse||'')+' ?\n\nIl disparaît de l\'appli (et des téléphones). Son dossier Drive part à la corbeille (récupérable 30 jours).\nTu pourras ensuite le réimporter.')) return;
+  await call('supprimerBon',S.pin,id); closeModal(true);
+  S.data.bons=S.data.bons.filter(x=>x.id!==id); render(); toast('Bon supprimé'); refresh(true);
+}
+async function saveBonForm(id){
+  const keys=['numero','donneurOrdre','adresse','ville','locataire','telLocataire','contact2','objet','description','urgent','dateLimite','acces','compagnonId','datePrevue','creneau','statut','notesBureau'];
+  const o={id:id||undefined}; keys.forEach(k=>o[k]=$('#f_'+k).value.trim());
+  if(o.compagnonId&&o.statut==='À attribuer') o.statut='Attribué';
+  o.lignes=(window._L_adm||[]).filter(l=>l.code||l.des);
+  await call('saveBon',S.pin,o); closeModal(); toast('Enregistré'); refresh(true);
+}
+
+/* --- import --- */
+function ouvrirImport(){
+  const dossier=S.data.config.DOSSIER_IMPORT_URL;
+  modal('Importer des bons','<div class="mb">'+
+   '<div class="drop" id="drop" onclick="$(\'#fi\').click()"><div style="font-size:34px">📥</div><b>Dépose ici les bons Word (ou PDF)</b><div class="mut">ou touche pour choisir – plusieurs fichiers possibles</div></div>'+
+   '<input type="file" id="fi" multiple accept=".doc,.docx,.pdf,.odt,.rtf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" class="hide" onchange="importer(this.files)">'+
+   '<div id="impRes" style="margin-top:12px"></div>'+
+   (dossier?'<p class="mut">Astuce : tu peux aussi enregistrer les bons téléchargés directement dans le dossier Drive <a href="'+dossier+'" target="_blank">« Bons à importer »</a> (par Google Drive pour ordinateur) : ils sont importés tout seuls toutes les 5 minutes.</p>':'')+
+  '</div>');
+  const d=$('#drop');
+  ['dragenter','dragover'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.add('over');}));
+  ['dragleave','drop'].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.remove('over');}));
+  d.addEventListener('drop',ev=>importer(ev.dataTransfer.files));
+}
+function lireB64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]); r.onerror=rej; r.readAsDataURL(file); }); }
+async function importer(files){
+  files=Array.from(files||[]); if(!files.length) return;
+  const zone=$('#impRes');
+  for(const f of files){
+    const ligne=document.createElement('div'); ligne.className='card'; ligne.innerHTML='⏳ '+esc(f.name)+' – lecture…'; zone.appendChild(ligne);
+    try{
+      if(f.size>20e6) throw new Error('fichier trop lourd');
+      const b64=await lireB64(f);
+      const r=await api('importBon',S.pin,f.name,f.type,b64);
+      const b=r.bon;
+      if(!r.doublon) S.data.bons.push(b);
+      ligne.innerHTML=(r.doublon?'⚠️ Déjà importé : ':'✅ ')+'<b>'+esc(b.numero)+'</b> – '+esc(b.adresse)+' '+esc(b.ville)+'<div class="mut">'+esc((b.objet||'').slice(0,120))+'</div>'+
+        '<button class="btn sm" style="margin-top:6px" onclick="closeModal();editBon(\''+b.id+'\')">Vérifier & attribuer</button>';
+    }catch(e){ ligne.innerHTML='❌ '+esc(f.name)+' : '+esc(e.message); }
+  }
+  render();
+}
+
+/* --- planning --- */
+function vPlanning(){
+  const l=new Date(S.semaine); const jours=[...Array(6)].map((_,i)=>{const d=new Date(l);d.setDate(d.getDate()+i);return iso(d);});
+  const comps=S.data.compagnons.filter(c=>c.actif!=='NON');
+  const B=S.data.bons.filter(b=>b.statut!=='Annulé');
+  let h='<div class="row" style="margin-bottom:10px"><button class="btn sec sm" onclick="decal(-7)">◀</button><b class="grow" style="text-align:center">Semaine du '+fr(jours[0])+' au '+fr(jours[5])+'</b><button class="btn sec sm" onclick="S.semaine=lundi(new Date());vPlanning()">Aujourd\'hui</button><button class="btn sec sm" onclick="decal(7)">▶</button></div>';
+  h+='<div class="plan card" style="padding:0"><table><tr><th></th>'+jours.map(j=>'<th>'+jourFr(j)+'</th>').join('')+'</tr>';
+  comps.forEach(c=>{
+    h+='<tr><td class="nm">'+esc(c.nom)+'</td>'+jours.map(j=>'<td class="'+(j===today()?'today':'')+'">'+
+      B.filter(b=>b.compagnonId===c.id&&b.datePrevue===j).map(b=>'<div class="it '+(b.urgent==='OUI'?'urg':'')+'" onclick="editBon(\''+b.id+'\')"><b>'+esc(b.creneau||'')+'</b> '+esc(b.numero)+'<br>'+esc((b.adresse||'').slice(0,40))+'<br>'+pill(b.statut)+'</div>').join('')+'</td>').join('')+'</tr>';
+  });
+  h+='</table></div>';
+  const np=B.filter(b=>['Terminé','Facturé'].indexOf(b.statut)<0&&(!b.compagnonId||!b.datePrevue));
+  h+='<h3>Non planifiés ('+np.length+')</h3>'+(np.length?np.map(carteBonAdmin).join(''):'<div class="card empty">Tout est planifié</div>');
+  $('#main').innerHTML=h;
+}
+function decal(n){ const d=new Date(S.semaine); d.setDate(d.getDate()+n); S.semaine=d; vPlanning(); }
+
+/* --- équipe --- */
+function vEquipe(){
+  let h='<div class="row" style="margin-bottom:10px"><span class="grow mut">Chaque compagnon se connecte avec son propre code PIN et ne voit que ses missions.</span><button class="btn sm" onclick="editComp()">＋ Ajouter</button></div>';
+  h+=S.data.compagnons.map(c=>'<div class="card row" style="cursor:pointer" onclick="editComp(\''+c.id+'\')"><span style="width:14px;height:14px;border-radius:50%;background:'+esc(c.couleur||'#999')+'"></span><span class="grow"><b>'+esc(c.nom)+'</b> '+(c.role==='admin'?'<span class="pill st-Attribué">Bureau</span>':'')+(c.actif==='NON'?' <span class="pill st-Annulé">inactif</span>':'')+'<br><span class="mut">PIN '+esc(c.pin)+(c.telephone?' · '+esc(c.telephone):'')+'</span></span><span class="mut">'+compte(b=>b.compagnonId===c.id&&['Attribué','En cours','À poursuivre'].indexOf(b.statut)>=0)+' ouvert(s)</span></div>').join('');
+  $('#main').innerHTML=h;
+}
+function editComp(id){
+  const c=id?S.data.compagnons.find(x=>x.id===id):{role:'compagnon',actif:'OUI',couleur:'#1f5f8b',pin:String(Math.floor(1000+Math.random()*9000))};
+  modal(id?c.nom:'Nouveau compagnon','<div class="mb"><div class="card">'+
+   '<label>Nom</label><input type="text" id="c_nom" value="'+esc(c.nom||'')+'">'+
+   '<div class="grid2"><div><label>Code PIN (4 à 8 chiffres)</label><input type="tel" id="c_pin" value="'+esc(c.pin||'')+'"></div>'+
+   '<div><label>Téléphone</label><input type="tel" id="c_tel" value="'+esc(c.telephone||'')+'"></div>'+
+   '<div><label>Rôle</label><select id="c_role"><option value="compagnon">Compagnon</option><option value="admin" '+(c.role==='admin'?'selected':'')+'>Bureau (accès complet)</option></select></div>'+
+   '<div><label>Actif</label><select id="c_actif"><option>OUI</option><option '+(c.actif==='NON'?'selected':'')+'>NON</option></select></div>'+
+   '<div><label>Couleur</label><input type="color" id="c_coul" value="'+esc(c.couleur||'#1f5f8b')+'" style="width:100%;height:42px;border:0"></div></div>'+
+   '</div><button class="btn full" onclick="saveComp(\''+(id||'')+'\')">Enregistrer</button></div>');
+}
+async function saveComp(id){
+  const o={id:id||undefined,nom:$('#c_nom').value.trim(),pin:$('#c_pin').value.trim(),telephone:$('#c_tel').value.trim(),role:$('#c_role').value,actif:$('#c_actif').value,couleur:$('#c_coul').value};
+  if(!o.nom) return toast('Nom obligatoire');
+  await call('saveCompagnon',S.pin,o);
+  if(id===S.user.id&&o.pin!==S.pin){ S.pin=o.pin; lsSet('pin',o.pin); }
+  closeModal(); toast('Enregistré'); refresh(true);
+}
+
+/* --- réglages --- */
+function vReglages(){
+  const c=S.data.config;
+  $('#main').innerHTML='<div class="card">'+
+   '<label>Nom de l\'entreprise (en-tête des rapports)</label><input type="text" id="r_nom" value="'+esc(c.NOM_ENTREPRISE||'')+'">'+
+   '<label>Coordonnées (sous le nom)</label><input type="text" id="r_coo" value="'+esc(c.COORDONNEES||'')+'">'+
+   '<label>Recevoir aussi chaque rapport par e-mail</label><select id="r_envm"><option value="NON">NON – rapports seulement dans l\'appli et le dossier Drive</option><option value="OUI" '+(c.ENVOI_MAIL==='OUI'?'selected':'')+'>OUI – envoyer aussi par e-mail</option></select>'+
+   '<label>E-mail du bureau (si envoi activé)</label><input type="email" id="r_mail" value="'+esc(c.EMAIL_BUREAU||'')+'" placeholder="ets.richard.philippe@wanadoo.fr"><div class="mut">Plusieurs adresses possibles, séparées par des virgules.</div>'+
+   '<div class="grid2"><div><label>Couleur</label><input type="color" id="r_coul" value="'+esc(c.COULEUR||'#1f5f8b')+'" style="width:100%;height:42px;border:0"></div>'+
+   '<div><label>PDF lisibles par lien (pour les compagnons)</label><select id="r_part"><option>OUI</option><option '+(c.PARTAGE_LIEN==='NON'?'selected':'')+'>NON</option></select></div></div>'+
+   '<label>Logo (PNG/JPG)</label><input type="file" accept="image/*" id="r_logo">'+
+   '<button class="btn full" style="margin-top:14px" onclick="saveReglages()">Enregistrer</button></div>'+
+   '<div class="card"><b>📱 Appli des compagnons (fonctionne sans réseau)</b>'+
+   '<label>Adresse de l\'appli installable (GitHub Pages)</label><input type="text" id="r_pwa" value="'+esc(c.URL_PWA||'')+'" placeholder="https://monlogin.github.io/missions/">'+
+   (c.URL_PWA?(()=>{ const lien=c.URL_PWA.replace(/\/?$/,'/')+'#api='+encodeURIComponent(c.URL_APP||''); const txt='Installe l\'appli Missions : ouvre ce lien sur ton téléphone, puis « Installer l\'appli » / « Ajouter à l\'écran d\'accueil » : '+lien;
+     return '<label>Lien d\'installation à envoyer aux compagnons</label><input type="text" readonly value="'+esc(lien)+'" onclick="this.select()">'+
+       '<div class="row" style="margin-top:8px"><a class="btn sm" href="https://wa.me/?text='+encodeURIComponent(txt)+'" target="_blank">Envoyer par WhatsApp</a><a class="btn sm sec" href="sms:?body='+encodeURIComponent(txt)+'">Par SMS</a></div>'; })():'<div class="mut">Renseigne l\'adresse GitHub Pages puis Enregistrer : le lien d\'installation apparaîtra ici.</div>')+
+   '</div>'+
+   '<div class="card"><b>💻 Envoi depuis le PC (clic droit › Envoyer vers)</b><div class="mut">À coller au premier lancement de l\'outil sur le PC :</div>'+
+   '<label>Adresse de l\'appli</label><input type="text" readonly value="'+esc(c.URL_APP||'')+'" onclick="this.select()">'+
+   '<label>Clé secrète</label><input type="text" readonly value="'+esc(c.CLE_API||'')+'" onclick="this.select()"></div>'+
+   '<div class="card"><b>🧾 Bibliothèque de références (BPU / Sage)</b><div class="mut">'+(S.data.bpu||[]).length+' référence(s) chargée(s). Dans Excel, sélectionne 3 colonnes côte à côte : <b>Référence – Désignation – Unité</b> (jamais la colonne prix), copie (Ctrl+C) et colle ici (Ctrl+V).</div>'+
+   '<label>Donneur d\'ordre concerné (facultatif)</label><input type="text" id="bpu_d" list="dl_donneurs2" placeholder="Angers Loire Habitat"><datalist id="dl_donneurs2">'+((c.DONNEURS||[]).map(d=>'<option value="'+esc(d)+'">').join(''))+'</datalist>'+
+   '<label>Coller ici</label><textarea id="bpu_t" style="min-height:120px;font-family:monospace;font-size:12px" placeholder="PL012\tRemplacement siphon PVC 40\tU&#10;DEP01\tDéplacement\tForf"></textarea>'+
+   '<label style="display:flex;gap:6px;align-items:center;color:var(--txt)"><input type="checkbox" id="bpu_r"> Remplacer la liste existante de ce donneur d\'ordre</label>'+
+   '<button class="btn full" style="margin-top:8px" onclick="importerBPU()">Charger les références</button></div>'+
+   (c.DOSSIER_IMPORT_URL?'<div class="card">📂 Dossier d\'import automatique : <a href="'+c.DOSSIER_IMPORT_URL+'" target="_blank">Bons à importer</a><div class="mut">Tout fichier Word/PDF déposé ici devient un bon « À attribuer » sous 5 min.</div></div>':'')+
+   '<div class="card mut">Missions Chantier – propriété de Guillaume Richard. Reproduction interdite.</div>';
+}
+async function importerBPU(){
+  const t=$('#bpu_t').value; if(!t.trim()) return toast('Colle d\'abord les lignes copiées depuis Excel');
+  const n=await call('importerBPU',S.pin,t,$('#bpu_d').value.trim(),$('#bpu_r').checked);
+  toast(n+' référence(s) chargée(s)'); refresh(true);
+}
+async function saveReglages(){
+  await call('saveConfig',S.pin,{NOM_ENTREPRISE:$('#r_nom').value,COORDONNEES:$('#r_coo').value,EMAIL_BUREAU:$('#r_mail').value.trim(),ENVOI_MAIL:$('#r_envm').value,URL_PWA:$('#r_pwa').value.trim(),COULEUR:$('#r_coul').value,PARTAGE_LIEN:$('#r_part').value});
+  const f=$('#r_logo').files[0];
+  if(f){ const b64=await compresser(f,400,0.9,'image/png'); await call('uploadLogo',S.pin,f.name,'image/png',b64.split(',')[1]); }
+  toast('Réglages enregistrés'); refresh(true);
+}
+
+/* ======================= COMPAGNON ======================= */
+function renderCompagnon(){
+  purgerFile();
+  const B=S.data.bons;
+  const ouverts=B.filter(b=>['Attribué','En cours','À poursuivre'].indexOf(b.statut)>=0);
+  const nouveaux=ouverts.filter(b=>!b.vu).length;
+  const att=fileAttente().filter(x=>!lsGet('err_'+x.bonId)).length;
+  let h=header()+'<main id="main"></main><div class="bnav">'+
+    '<button class="'+(S.tab!=='histo'?'on':'')+'" onclick="S.tab=\'missions\';renderCompagnon()"><span class="ic">🔧</span>Mes missions'+(nouveaux?'<span class="badge">'+nouveaux+'</span>':'')+'</button>'+
+    '<button class="'+(S.tab==='histo'?'on':'')+'" onclick="S.tab=\'histo\';renderCompagnon()"><span class="ic">✅</span>Terminées</button></div>';
+  $('#app').innerHTML=h;
+  let m=att?'<div class="banner row"><span class="grow">📤 '+att+' rapport(s) en attente d\'envoi (pas de réseau)</span><button class="btn sm warn" onclick="envoyerFileAttente(true)">Envoyer</button></div>':'';
+  if(S.tab==='histo'){
+    const T=B.filter(b=>['Terminé','Facturé'].indexOf(b.statut)>=0).sort((a,b)=>String(b.dateFin).localeCompare(String(a.dateFin)));
+    m+='<h3>Terminées (30 derniers jours)</h3>'+(T.length?T.map(carteMission).join(''):'<div class="card empty">Rien pour l\'instant</div>');
+  } else {
+    const tri=(a,b)=>String(a.datePrevue||'9999').localeCompare(String(b.datePrevue||'9999'))||(b.urgent==='OUI')-(a.urgent==='OUI');
+    const auj=ouverts.filter(b=>b.datePrevue&&b.datePrevue<=today()).sort(tri);
+    const plus=ouverts.filter(b=>!b.datePrevue||b.datePrevue>today()).sort(tri);
+    m+='<h3>Aujourd\'hui et en retard ('+auj.length+')</h3>'+(auj.length?auj.map(carteMission).join(''):'<div class="card empty">Rien de prévu aujourd\'hui</div>');
+    m+='<h3>À venir ('+plus.length+')</h3>'+(plus.length?plus.map(carteMission).join(''):'<div class="card empty">Aucune autre mission</div>');
+  }
+  $('#main').innerHTML=m;
+}
+function carteMission(b){
+  const brouillon=lsGet('draft_'+b.id);
+  return '<div class="card bon '+(!b.vu&&b.statut==='Attribué'?'nouveau':(b.urgent==='OUI'?'urgent':''))+'" onclick="ouvrirMission(\''+b.id+'\')">'+
+    '<div class="row"><span class="t grow">'+esc(b.numero)+'</span>'+(!b.vu&&b.statut==='Attribué'?'<span class="pill new">NOUVEAU</span>':'')+(b.urgent==='OUI'?'<span class="pill urg">URGENT</span>':'')+pill(b.statut)+'</div>'+
+    '<div class="adr"><a href="'+mapsLink(b)+'" target="_blank" onclick="event.stopPropagation()">📍 '+esc(b.adresse)+' '+esc(b.ville)+'</a></div>'+
+    '<div class="mut">'+esc((b.objet||'').slice(0,120))+'</div>'+
+    '<div class="row mut" style="margin-top:4px">'+(b.datePrevue?'<span>📅 '+jourFr(b.datePrevue)+(b.creneau?' · '+esc(b.creneau):'')+'</span>':'<span>📅 date à caler</span>')+(enAttente(b.id)?'<span style="color:var(--warn);font-weight:700">📤 rapport en attente d\'envoi</span>':(brouillon?'<span>📝 rapport en brouillon</span>':''))+'</div></div>';
+}
+function ouvrirMission(id){
+  const b=S.data.bons.find(x=>x.id===id); if(!b) return;
+  if(!b.vu){ b.vu='1'; garderCopie(); api('marquerVu',S.pin,id).catch(()=>{}); }
+  const ouvert=['Attribué','En cours','À poursuivre'].indexOf(b.statut)>=0;
+  let h='<div class="mb">'+
+   '<div class="card"><div class="row"><span class="grow"><b style="font-size:17px">'+esc(b.numero)+'</b>'+(b.donneurOrdre?'<div class="mut">'+esc(b.donneurOrdre)+'</div>':'')+'</span>'+pill(b.statut)+'</div>'+
+   '<a href="'+mapsLink(b)+'" target="_blank" style="display:block;margin-top:8px;font-size:16px;text-decoration:none;color:inherit;background:var(--c2);border-radius:10px;padding:10px">📍 <b style="color:var(--c);text-decoration:underline">'+esc(b.adresse)+'<br>'+esc(b.ville)+'</b><div class="mut" style="margin-top:2px">Toucher pour lancer le GPS</div></a>'+
+   (b.locataire||b.telLocataire?'<div style="margin-top:8px">👤 '+esc(b.locataire)+(b.telLocataire?' – '+telsHtml(b.telLocataire):'')+'</div>':'')+
+   (b.contact2?'<div style="margin-top:6px">👥 '+telsHtml(b.contact2)+'</div>':'')+
+   (b.acces?'<div style="margin-top:6px">🔑 '+esc(b.acces)+'</div>':'')+
+   (b.datePrevue?'<div style="margin-top:6px">📅 '+jourFr(b.datePrevue)+(b.creneau?' · '+esc(b.creneau):'')+'</div>':'')+
+   (b.dateLimite?'<div style="margin-top:6px">⏳ À faire avant le '+fr(b.dateLimite)+'</div>':'')+
+   '</div>'+
+   '<div class="row" style="margin-bottom:10px">'+
+     (b.telLocataire?'<a class="btn sec grow" href="'+telLink(b.telLocataire)+'">📞 Appeler</a>':'')+
+     '<a class="btn sec grow" href="'+mapsLink(b)+'" target="_blank">🧭 Maps</a>'+
+     '<a class="btn sec grow" href="'+wazeLink(b)+'" target="_blank">🚗 Waze</a>'+
+     (b.fichierBonUrl?'<button class="btn sec grow" onclick="ouvrirBon(\''+b.id+'\')">📄 Le bon</button>':'')+
+   '</div>'+
+   '<div class="card"><b>Travaux demandés</b><div style="margin-top:6px;white-space:pre-wrap">'+esc(b.objet)+(b.description?'\n\n'+esc(b.description):'')+'</div>'+
+   (lignesDe(b).length?'<div style="margin-top:8px">'+lignesDe(b).map(l=>'<div class="row" style="border-top:1px solid var(--bd);padding:5px 0"><b style="min-width:70px">'+esc(l.code)+'</b><span class="grow">'+esc(l.des)+'</span><span class="mut">'+esc(l.qteCde)+' '+esc(l.unite)+'</span></div>').join('')+'</div>':'')+'</div>'+
+   (b.texteBon?'<details class="card"><summary><b>Texte complet du bon</b></summary><pre class="txtbon">'+esc(b.texteBon)+'</pre></details>':'')+
+   (b.rapportPdfUrl?'<a class="btn sec full" style="margin-bottom:10px" href="'+esc(b.rapportPdfUrl)+'" target="_blank">✅ Voir mon dernier rapport</a>':'')+
+   (enAttente(b.id)?'<div class="banner">📤 <b>Rapport fait, en attente d\'envoi</b> (pas de réseau au moment de l\'envoi). Il partira tout seul dès que le réseau revient.'+(lsGet('err_'+b.id)?'<br><span style="color:var(--err)">Dernière erreur : '+esc(lsGet('err_'+b.id))+'</span>':'')+
+     '<div class="row" style="margin-top:8px"><button class="btn sm warn grow" onclick="envoyerFileAttente(true).then(()=>{closeModal(true);renderCompagnon();})">📤 Réessayer maintenant</button><button class="btn sm sec grow" onclick="formRapport(\''+b.id+'\')">✏️ Corriger le rapport</button></div></div>':
+   ouvert?(b.statut==='Attribué'?'<button class="btn full warn" onclick="demarrer(\''+b.id+'\')">▶ Je suis sur place – démarrer</button>':'<button class="btn full" onclick="formRapport(\''+b.id+'\')">📝 Faire le rapport</button>'):'')+
+  '</div>';
+  modal('Mission',h);
+  if(document.querySelector('.bnav')) renderCompagnonBadge();
+}
+function renderCompagnonBadge(){ /* le badge est recalculé au prochain rendu */ }
+async function demarrer(id){
+  const b=S.data.bons.find(x=>x.id===id);
+  const d=brouillonGet(id); d.heureArrivee=d.heureArrivee||hhmm(); d.dateIntervention=d.dateIntervention||today(); brouillonSet(id,d);
+  try{ await api('demarrer',S.pin,id); b.statut='En cours'; }catch(e){ toast('Hors réseau : démarrage noté sur le téléphone'); b.statut='En cours'; }
+  garderCopie();
+  formRapport(id);
+}
+
+/* --- rapport --- */
+function brouillonGet(id){ try{ return JSON.parse(lsGet('draft_'+id)||'{}'); }catch(e){ return {}; } }
+function brouillonSet(id,d){ if(!lsSet('draft_'+id,JSON.stringify(d))){ const x=Object.assign({},d,{photos:[]}); lsSet('draft_'+id,JSON.stringify(x)); toast('Mémoire pleine : photos non gardées en brouillon'); } }
+let R=null, sig=null;
+function formRapport(id){
+  const b=S.data.bons.find(x=>x.id===id);
+  const att=enAttente(id);
+  R=Object.assign({bonId:id,dateIntervention:today(),heureArrivee:'',heureDepart:'',travaux:'',materiel:'',reserves:'',finIntervention:'Terminée',signataire:b.locataire||'',absent:false,photos:[],signature:''},att||{},brouillonGet(id));
+  if(!R.heureArrivee) R.heureArrivee=hhmm();
+  const seg=['Terminée','À poursuivre','Devis nécessaire'];
+  const h='<div class="mb">'+
+   '<div class="card"><b>'+esc(b.numero)+'</b> – '+esc(b.adresse)+'</div>'+
+   (att?'<div class="banner">📤 Ce rapport est déjà <b>en attente d\'envoi</b>. Tu peux le corriger : il ne partira qu\'<b>une seule fois</b>.</div>':'')+
+   '<div class="card"><div class="grid2">'+
+     '<div><label>Date</label><input type="date" id="r_date" value="'+esc(R.dateIntervention)+'"></div>'+
+     '<div></div>'+
+     '<div><label>Arrivée</label><div class="row"><input type="time" id="r_arr" value="'+esc(R.heureArrivee)+'" class="grow"><button class="btn sec sm" onclick="$(\'#r_arr\').value=hhmm();saveDraft()">Maint.</button></div></div>'+
+     '<div><label>Départ</label><div class="row"><input type="time" id="r_dep" value="'+esc(R.heureDepart)+'" class="grow"><button class="btn sec sm" onclick="$(\'#r_dep\').value=hhmm();saveDraft()">Maint.</button></div></div>'+
+   '</div></div>'+
+   (lignesDe(b).length?'<div class="card"><b>Références du bon</b> <span class="mut">– notées sur le bon, transmises telles quelles</span>'+lignesDe(b).map(l=>'<div class="row" style="border-top:1px solid var(--bd);padding:6px 0"><b style="min-width:70px">'+esc(l.code)+'</b><span class="grow">'+esc(l.des)+'</span><span class="mut">'+esc(l.qte||l.qteCde)+' '+esc(l.unite)+'</span></div>').join('')+'</div>':'')+
+   '<div class="card"><label style="margin-top:0">Travaux réalisés *</label><textarea id="r_trav" placeholder="Ex : remplacement du mécanisme de chasse WC, contrôle étanchéité OK">'+esc(R.travaux)+'</textarea>'+
+   '<label class="row"><span class="grow">Fournitures en plus du bon (détail de ce qui a été posé en plus) *</span><button type="button" class="btn sec sm" onclick="$(\'#r_mat\').value=\'Aucune\';saveDraft()">Aucune</button></label><textarea id="r_mat" style="min-height:70px" placeholder="Ex : 1 flexible inox 50 cm, 2 joints fibre 15x21, 1 robinet d\'arrêt 1/4 tour">'+esc(R.materiel)+'</textarea>'+
+   '<label class="row"><span class="grow">Observations / réserves *</span><button type="button" class="btn sec sm" onclick="$(\'#r_res\').value=\'Aucune\';saveDraft()">Aucune</button></label><textarea id="r_res" style="min-height:60px" placeholder="Ex : fuite sur colonne EU à prévoir">'+esc(R.reserves)+'</textarea>'+
+   '<label>Fin d\'intervention</label><div class="seg" id="r_fin">'+seg.map(s=>'<label class="'+(R.finIntervention===s?'on':'')+'" onclick="R.finIntervention=\''+s+'\';$$(\'#r_fin label\').forEach(l=>l.classList.toggle(\'on\',l.textContent===\''+s+'\'));saveDraft()">'+s+'</label>').join('')+'</div></div>'+
+   '<div class="card"><div class="row"><b class="grow">Photos ('+'<span id="nbph">'+R.photos.length+'</span>)</b>'+
+     '<button class="btn sec sm" onclick="$(\'#r_cam\').click()">📷 Photo</button><button class="btn sec sm" onclick="$(\'#r_gal\').click()">🖼 Galerie</button></div>'+
+     '<input type="file" id="r_cam" accept="image/*" capture="environment" class="hide" onchange="ajoutPhotos(this)">'+
+     '<input type="file" id="r_gal" accept="image/*" multiple class="hide" onchange="ajoutPhotos(this)">'+
+     '<div class="photos" id="r_ph"></div></div>'+
+   '<div class="card"><div class="row"><b class="grow">Signature de l\'occupant</b><label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--txt)"><input type="checkbox" id="r_abs" '+(R.absent?'checked':'')+' onchange="R.absent=this.checked;$(\'#sigZone\').classList.toggle(\'hide\',R.absent);saveDraft()"> Absent</label></div>'+
+     '<div id="sigZone" class="'+(R.absent?'hide':'')+'"><label>Nom du signataire</label><input type="text" id="r_signa" value="'+esc(R.signataire)+'">'+
+     '<label>Signer avec le doigt</label><canvas class="sig" id="sigc"></canvas><div class="row" style="margin-top:6px"><span class="grow mut">Le nom et la date seront imprimés sur le PDF.</span><button class="btn sec sm" onclick="sig.clear();R.signature=\'\';saveDraft()">Effacer</button></div></div></div>'+
+   '<button class="btn full ok" style="padding:15px;font-size:16px" onclick="validerRapport()">📤 Envoyer le rapport au bureau</button>'+
+   '<p class="mut" style="text-align:center">Le rapport est gardé en brouillon sur le téléphone tant qu\'il n\'est pas envoyé.</p>'+
+  '</div>';
+  modal('Rapport d\'intervention',h,()=>saveDraft());
+  window._lgChange=null;
+  dessinPhotos();
+  sig=SignaturePad($('#sigc'),R.signature,()=>{R.signature=sig.data();saveDraft();});
+  $$('.modal input,.modal textarea').forEach(el=>el.addEventListener('input',()=>{clearTimeout(window._dt);window._dt=setTimeout(saveDraft,400);}));
+}
+function lireForm(){
+  if(!R||!$('#r_trav')) return;
+  R.dateIntervention=$('#r_date').value; R.heureArrivee=$('#r_arr').value; R.heureDepart=$('#r_dep').value;
+  R.travaux=$('#r_trav').value; R.materiel=$('#r_mat').value; R.reserves=$('#r_res').value;
+  R.signataire=($('#r_signa')||{}).value||''; R.absent=$('#r_abs').checked;
+  $$('#r_ph input').forEach((inp,i)=>{ if(R.photos[i]) R.photos[i].legende=inp.value; });
+}
+function saveDraft(){ if(!R) return; lireForm(); brouillonSet(R.bonId,R); }
+function dessinPhotos(){
+  $('#r_ph').innerHTML=R.photos.map((p,i)=>'<div><img src="'+p.b64+'"><button onclick="R.photos.splice('+i+',1);dessinPhotos();saveDraft()">✕</button><input placeholder="légende" value="'+esc(p.legende||'')+'" oninput="R.photos['+i+'].legende=this.value;saveDraft()"></div>').join('');
+  $('#nbph').textContent=R.photos.length;
+}
+async function ajoutPhotos(inp){
+  const fs=Array.from(inp.files||[]); inp.value='';
+  for(const f of fs){ try{ R.photos.push({b64:await compresser(f,1400,0.7),legende:''}); }catch(e){ toast('Photo illisible'); } }
+  dessinPhotos(); saveDraft();
+}
+function compresser(file,max,q,type){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{ const img=new Image(); img.onload=()=>{
+      let w=img.width,h=img.height; const k=Math.min(1,max/Math.max(w,h)); w=Math.round(w*k); h=Math.round(h*k);
+      const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d');
+      if(!type||type==='image/jpeg'){ x.fillStyle='#fff'; x.fillRect(0,0,w,h); }
+      x.drawImage(img,0,0,w,h); res(c.toDataURL(type||'image/jpeg',q));
+    }; img.onerror=rej; img.src=r.result; };
+    r.onerror=rej; r.readAsDataURL(file);
+  });
+}
+function SignaturePad(cv,initial,onEnd){
+  const ratio=Math.max(1,window.devicePixelRatio||1);
+  const rect=cv.getBoundingClientRect(); cv.width=rect.width*ratio; cv.height=rect.height*ratio;
+  const ctx=cv.getContext('2d'); ctx.scale(ratio,ratio); ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#111';
+  let draw=false, vide=true, last=null;
+  if(initial){ const im=new Image(); im.onload=()=>{ ctx.drawImage(im,0,0,rect.width,rect.height); vide=false; }; im.src=initial; }
+  const pos=e=>{ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; };
+  cv.addEventListener('pointerdown',e=>{ draw=true; last=pos(e); cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last.x,last.y,1.1,0,7); ctx.fill(); vide=false; });
+  cv.addEventListener('pointermove',e=>{ if(!draw) return; const p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+  const fin=()=>{ if(draw){ draw=false; onEnd&&onEnd(); } };
+  cv.addEventListener('pointerup',fin); cv.addEventListener('pointercancel',fin); cv.addEventListener('pointerleave',fin);
+  return { clear(){ ctx.clearRect(0,0,cv.width,cv.height); vide=true; }, data(){ return vide?'':cv.toDataURL('image/png'); }, vide(){ return vide; } };
+}
+async function validerRapport(){
+  saveDraft();
+  const manque=[];
+  if(!R.travaux.trim()) manque.push('Travaux réalisés');
+  if(!R.materiel.trim()) manque.push('Fournitures en plus (ou « Aucune »)');
+  if(!R.reserves.trim()) manque.push('Observations (ou « Aucune »)');
+  ['r_trav','r_mat','r_res'].forEach(i=>{ const el=$('#'+i); if(el) el.style.borderColor=el.value.trim()?'':'var(--err)'; });
+  if(manque.length){ const el=$('#'+(!R.travaux.trim()?'r_trav':!R.materiel.trim()?'r_mat':'r_res')); if(el){ el.scrollIntoView({block:'center'}); el.focus(); } return toast('À remplir : '+manque.join(', '),4500); }
+  if(!R.heureDepart){ R.heureDepart=hhmm(); $('#r_dep').value=R.heureDepart; }
+  if(!R.absent&&(!sig||sig.vide())) { if(!confirm('Pas de signature. Envoyer quand même ?')) return; }
+  if(!R.absent) R.signature=sig.data();
+  const att=enAttente(R.bonId);
+  const envoi=Object.assign({},R,{clientRef:(att&&att.clientRef)||R.clientRef||('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6))});
+  R.clientRef=envoi.clientRef; brouillonSet(R.bonId,R);
+  busy(true);
+  try{
+    const res=await api('envoyerRapport',S.pin,envoi);
+    retirerFile(R.bonId); lsSet('err_'+R.bonId,null);
+    lsSet('draft_'+R.bonId,null); R=null; closeModal(true);
+    toast(res.mail===false?'✅ Rapport enregistré (e-mail non parti)':'✅ Rapport envoyé au bureau',3500);
+    refresh(true);
+  }catch(e){
+    if(estDefinitif(e)){ retirerFile(R.bonId); lsSet('draft_'+R.bonId,null); R=null; closeModal(true); toast('Ce bon a été supprimé ou réattribué par le bureau.',5000); refresh(true); }
+    else if(/PIN/.test(e.message)){ toast('⚠️ '+e.message,4500); }
+    else {
+      ajoutFile(envoi); if(!estReseau(e)) lsSet('err_'+R.bonId,String(e.message||e));
+      lsSet('draft_'+R.bonId,null); R=null; closeModal(true);
+      toast(estReseau(e)?'📶 Pas de réseau : rapport gardé sur le téléphone. Il partira tout seul au retour du réseau – inutile de le refaire.':'⚠️ Rapport gardé, mais erreur serveur : '+e.message,6000);
+      renderCompagnon();
+    }
+  }finally{ busy(false); }
+}
+/* file d'attente hors réseau */
+function fileAttente(){
+  let f=[]; try{ f=JSON.parse(lsGet('outbox')||'[]'); }catch(e){ f=[]; }
+  if(!f.length&&window._outboxMem) f=window._outboxMem;
+  /* un seul rapport en attente par bon (le plus récent) – nettoie aussi les anciens doublons */
+  const parBon={}; f.forEach(x=>{ parBon[x.bonId]=x; }); const g=Object.keys(parBon).map(k=>parBon[k]);
+  if(g.length!==f.length) lsSet('outbox',JSON.stringify(g));
+  return g;
+}
+function enAttente(bonId){ return fileAttente().find(x=>x.bonId===bonId); }
+function ajoutFile(r){
+  let f=fileAttente(); const old=f.find(x=>x.bonId===r.bonId);
+  if(old) r.clientRef=old.clientRef; /* même référence → jamais envoyé deux fois */
+  f=f.filter(x=>x.bonId!==r.bonId); f.push(r);
+  if(!lsSet('outbox',JSON.stringify(f))){ toast('⚠️ Mémoire pleine : garde la page ouverte et réessaie',6000); window._outboxMem=f; }
+}
+function retirerFile(bonId){ const f=fileAttente().filter(x=>x.bonId!==bonId); lsSet('outbox',JSON.stringify(f)); window._outboxMem=null; }
+function estDefinitif(e){ return /introuvable|non attribuée|n'existe plus/i.test(String(e&&e.message||e)); }
+function purgerFile(){ /* rapports en attente dont le bon n'est plus attribué à ce compagnon (supprimé, réattribué) */
+  if(!S.data||!S.user||S.user.role==='admin') return;
+  const ids=S.data.bons.filter(b=>['Attribué','En cours','À poursuivre'].indexOf(b.statut)>=0).map(b=>b.id);
+  fileAttente().forEach(x=>{ if(ids.indexOf(x.bonId)<0){ retirerFile(x.bonId); lsSet('draft_'+x.bonId,null); lsSet('err_'+x.bonId,null); } });
+}
+function estReseau(e){ return !navigator.onLine||/network|réseau|connexion|connection|timeout|failed to fetch|HTTP 0|Hors connexion/i.test(String(e&&e.message||e)); }
+let _envoiEnCours=false;
+async function envoyerFileAttente(manuel){
+  const f=fileAttente();
+  if(!f.length||_envoiEnCours||!S.pin) return;
+  _envoiEnCours=true; let ok=0;
+  if(manuel) busy(true);
+  for(const r of f.slice()){
+    try{ await api('envoyerRapport',S.pin,r); ok++; retirerFile(r.bonId); lsSet('draft_'+r.bonId,null); lsSet('err_'+r.bonId,null); }
+    catch(e){
+      if(estReseau(e)){ if(manuel) toast('📶 Toujours pas de réseau – le rapport reste gardé, rien n\'est perdu',4000); break; }
+      if(estDefinitif(e)){ retirerFile(r.bonId); lsSet('draft_'+r.bonId,null); lsSet('err_'+r.bonId,null); if(manuel) toast('Ce bon a été supprimé ou réattribué par le bureau : rapport retiré.',5000); continue; }
+      lsSet('err_'+r.bonId,String(e.message||e)); if(manuel) toast('⚠️ Erreur serveur : '+(e.message||e),6000);
+    }
+  }
+  if(manuel) busy(false);
+  _envoiEnCours=false;
+  if(ok){ toast('📤 '+ok+' rapport(s) en attente envoyé(s)'); refresh(true); }
+}
+
+/* ---------- modale ---------- */
+let _onClose=null;
+function modal(titre,html,onClose){
+  closeModal(true); _onClose=onClose||null;
+  const ov=document.createElement('div'); ov.className='ov'; ov.id='ov';
+  ov.innerHTML='<div class="modal"><div class="mh"><h2>'+esc(titre)+'</h2><button onclick="closeModal()">✕</button></div>'+html+'</div>';
+  ov.addEventListener('click',e=>{ if(e.target===ov) closeModal(); });
+  document.body.appendChild(ov); document.body.style.overflow='hidden';
+}
+function closeModal(silencieux){
+  const o=$('#ov'); if(!o) return;
+  if(!silencieux&&_onClose) _onClose();
+  _onClose=null; o.remove(); document.body.style.overflow='';
+  if(!silencieux&&S.user&&S.user.role!=='admin') renderCompagnon();
+}
+
+(async()=>{
+  await idbLoad();
+  const m=location.hash.match(/api=([^&]+)/);
+  if(m){ lsSet('api',decodeURIComponent(m[1])); history.replaceState(null,'',location.pathname); }
+  S.pin=lsGet('pin')||'';
+  if(S.pin) S.tab='missions';
+  if('serviceWorker' in navigator){ try{ await navigator.serviceWorker.register('sw.js'); }catch(e){} }
+  boot();
+})();
+</script>
+</body>
+</html>
