@@ -61,6 +61,9 @@ textarea{min-height:80px;resize:vertical}
 .bon .adr{font-size:14px}
 .bon.urgent{border-left:5px solid var(--err)}
 .bon.nouveau{border-left:5px solid var(--warn)}
+.bon.appele{border-left:5px solid var(--ok);background:#f1f8f1}
+.appel{border:2px dashed var(--bd);background:#fff;color:var(--mut);border-radius:20px;padding:5px 12px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+.appel.on{border:2px solid var(--ok);background:var(--ok);color:#fff}
 .empty{text-align:center;color:var(--mut);padding:30px 10px}
 /* Modal */
 .ov{position:fixed;inset:0;background:#0007;z-index:50;display:flex;align-items:flex-end;justify-content:center}
@@ -157,6 +160,17 @@ function jourFr(isoStr){ const d=new Date(isoStr+'T12:00'); return isNaN(d)?'':d
 function lundi(d){ d=new Date(d); const j=(d.getDay()+6)%7; d.setDate(d.getDate()-j); d.setHours(12,0,0,0); return d; }
 function stCls(s){ return 'st-'+String(s||'').replace(/\s+/g,'-'); }
 function pill(s){ return '<span class="pill '+stCls(s)+'">'+esc(s)+'</span>'; }
+function confirmer(msg,oui,non,danger){
+  return new Promise(res=>{
+    const d=document.createElement('div'); d.id='cf'; d.className='ov'; d.style.zIndex='90'; d.style.alignItems='center';
+    d.innerHTML='<div class="modal" style="max-width:420px;border-radius:16px;margin:16px;padding:0"><div class="mb" style="padding:18px 16px 8px;white-space:pre-line;font-size:16px">'+esc(msg)+'</div>'+
+      '<div class="row" style="padding:8px 16px 16px;justify-content:flex-end"><button class="btn sec" id="cf_non">'+esc(non||'Annuler')+'</button><button class="btn '+(danger?'err':'')+'" id="cf_oui">'+esc(oui||'OK')+'</button></div></div>';
+    const fin=v=>{ d.remove(); res(v); };
+    d.addEventListener('click',e=>{ if(e.target===d) fin(false); });
+    document.body.appendChild(d);
+    d.querySelector('#cf_non').onclick=()=>fin(false); d.querySelector('#cf_oui').onclick=()=>fin(true);
+  });
+}
 function toast(m,ms){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),ms||2600); }
 function busy(on){ $('#load').classList.toggle('hide',!on); }
 function comp(id){ return (S.data&&S.data.compagnons||[]).find(c=>c.id===id); }
@@ -279,7 +293,7 @@ async function padKey(k){
   }
   if(saisie.length<8){ saisie+=k; drawDots(); }
 }
-function logout(){ if(!confirm('Se déconnecter de ce téléphone ?')) return; lsSet('pin',null); S.pin=''; S.user=null; S.data=null; renderLogin(); }
+async function logout(){ if(!(await confirmer('Se déconnecter de ce téléphone ?','Se déconnecter'))) return; lsSet('pin',null); S.pin=''; S.user=null; S.data=null; renderLogin(); }
 
 /* ---------- rendu principal ---------- */
 function render(){
@@ -303,8 +317,11 @@ function renderAdmin(){
 function compte(f){ return S.data.bons.filter(f).length; }
 function vAccueil(){
   const B=S.data.bons, mois=today().slice(0,7);
+  const barre='<div class="row" style="margin-bottom:12px"><input type="text" class="grow" style="font-size:16px;padding:12px" placeholder="🔎 Rechercher un bon : n° de bon, nom, adresse, téléphone…" onkeydown="if(event.key===\'Enter\'&&this.value.trim()) rechercher(this.value)"><button class="btn" onclick="const i=this.previousElementSibling; if(i.value.trim()) rechercher(i.value)">Rechercher</button></div>';
   const tiles=[
     ['À attribuer',compte(b=>b.statut==='À attribuer'),'#c62828','À attribuer'],
+    ['📞 Ont appelé',compte(b=>attendAppel(b)&&!!b.appelLe),'#2e7d32','appele'],
+    ['⏳ Pas encore appelé',compte(b=>attendAppel(b)&&!b.appelLe),'#6b7680','attente'],
     ['Attribués',compte(b=>b.statut==='Attribué'),'#0d47a1','Attribué'],
     ['En cours',compte(b=>b.statut==='En cours'),'#e65100','En cours'],
     ['À poursuivre',compte(b=>b.statut==='À poursuivre'),'#8d6e00','À poursuivre'],
@@ -312,7 +329,7 @@ function vAccueil(){
     ['Facturés ce mois',compte(b=>b.statut==='Facturé'&&(b.dateFin||b.majLe||'').slice(0,7)===mois),'#455a64','Facturé'],
     ['En retard',compte(enRetard),'#b71c1c','retard']
   ];
-  let h='<div class="stats">'+tiles.map(t=>'<div class="stat" onclick="S.tab=\'bons\';S.filtre=\''+t[3]+'\';render()"><b style="color:'+t[2]+'">'+t[1]+'</b><span>'+t[0]+'</span></div>').join('')+'</div>';
+  let h=barre+'<div class="stats">'+tiles.map(t=>'<div class="stat" onclick="S.tab=\'bons\';S.filtre=\''+t[3]+'\';render()"><b style="color:'+t[2]+'">'+t[1]+'</b><span>'+t[0]+'</span></div>').join('')+'</div>';
 
   const prio=B.filter(b=>b.statut==='À attribuer'||enRetard(b)||(b.urgent==='OUI'&&['Terminé','Facturé','Annulé'].indexOf(b.statut)<0))
     .sort((a,b)=>(b.urgent==='OUI')-(a.urgent==='OUI')||String(a.dateLimite||'9').localeCompare(String(b.dateLimite||'9')));
@@ -332,16 +349,29 @@ function vAccueil(){
   $('#main').innerHTML=h;
 }
 
+function attendAppel(b){ return ['À attribuer','Attribué'].indexOf(b.statut)>=0||!b.statut; }
+function boutonAppel(b){
+  if(!attendAppel(b)&&!b.appelLe) return '';
+  return b.appelLe?'<button class="appel on" title="Cliquer pour annuler" onclick="event.stopPropagation();basculerAppel(\''+b.id+'\')">📞 A appelé · '+esc(fr(b.appelLe.slice(0,10)))+' '+esc(b.appelLe.slice(11,16))+'</button>'
+    :'<button class="appel" title="Le locataire a appelé : cliquer pour le noter" onclick="event.stopPropagation();basculerAppel(\''+b.id+'\')">📞 Pas encore appelé</button>';
+}
+async function basculerAppel(id){
+  const b=S.data.bons.find(x=>x.id===id); if(!b) return;
+  if(b.appelLe&&!(await confirmer('Annuler « a appelé » pour le bon '+(b.numero||'')+' ?','Annuler l\'appel','Garder'))) return;
+  const ancien=b.appelLe; b.appelLe=ancien?'':'…'; render();
+  try{ b.appelLe=await api('marquerAppel',S.pin,id,!ancien); render(); toast(ancien?'Appel annulé':'📞 Noté : le locataire a appelé'); }
+  catch(e){ b.appelLe=ancien; render(); toast('⚠️ '+e.message); }
+}
 function carteBonAdmin(b){
   const c=comp(b.compagnonId);
   const chk=b.statut==='Terminé'?'<input type="checkbox" class="list-check" '+(S.sel[b.id]?'checked':'')+' onclick="event.stopPropagation();S.sel[\''+b.id+'\']=this.checked;majSel()">':'';
-  return '<div class="card bon '+(b.urgent==='OUI'||enRetard(b)?'urgent':'')+'" onclick="editBon(\''+b.id+'\')">'+
+  return '<div class="card bon '+(b.appelLe&&attendAppel(b)?'appele':(b.urgent==='OUI'||enRetard(b)?'urgent':''))+'" onclick="editBon(\''+b.id+'\')">'+
     '<div class="row">'+chk+'<span class="t grow">'+esc(b.numero||'(sans n°)')+(b.donneurOrdre?' <span class="mut">· '+esc(b.donneurOrdre)+'</span>':'')+'</span>'+
     (b.urgent==='OUI'?'<span class="pill urg">URGENT</span>':'')+(enRetard(b)?'<span class="pill urg">Retard</span>':'')+pill(b.statut)+
     '<button class="btn sec sm" title="Supprimer ce bon" style="padding:4px 8px" onclick="event.stopPropagation();supprimerBon(\''+b.id+'\')">🗑</button></div>'+
     '<div class="adr"><a href="'+mapsLink(b)+'" target="_blank" onclick="event.stopPropagation()">📍 '+esc(b.adresse)+' '+esc(b.ville)+'</a></div>'+
     '<div class="mut">'+esc((b.objet||'').slice(0,140))+'</div>'+
-    '<div class="row mut" style="margin-top:4px">'+
+    '<div class="row mut" style="margin-top:4px">'+boutonAppel(b)+
       (c?'<span>👷 '+esc(c.nom)+'</span>':'<span style="color:var(--err)">👷 non attribué</span>')+
       (b.datePrevue?'<span>📅 '+jourFr(b.datePrevue)+(b.creneau?' '+esc(b.creneau):'')+'</span>':'')+
       (b.dateLimite?'<span>⏳ limite '+fr(b.dateLimite)+'</span>':'')+
@@ -368,22 +398,37 @@ async function attribuer(id){
 
 function vBons(){
   const B=S.data.bons;
-  const filtres=[['actifs','Ouverts',b=>['Terminé','Facturé','Annulé'].indexOf(b.statut)<0],['tous','Tous',b=>true],['retard','En retard',enRetard]]
+  const filtres=[['actifs','Ouverts',b=>['Terminé','Facturé','Annulé'].indexOf(b.statut)<0],['appele','📞 Ont appelé',b=>attendAppel(b)&&!!b.appelLe],['attente','⏳ Pas encore appelé',b=>attendAppel(b)&&!b.appelLe],['tous','Tous',b=>true],['retard','En retard',enRetard]]
     .concat(STATUTS.map(s=>[s,s,b=>b.statut===s]));
   const f=(filtres.find(x=>x[0]===S.filtre)||filtres[0])[2];
-  const q=S.q.toLowerCase();
-  let L=B.filter(f).filter(b=>!S.fComp||b.compagnonId===S.fComp||(S.fComp==='_'&&!b.compagnonId))
-    .filter(b=>!q||[b.numero,b.adresse,b.ville,b.locataire,b.objet,b.donneurOrdre,b.fichierOrigine].join(' ').toLowerCase().indexOf(q)>=0)
-    .sort((a,b)=>(b.urgent==='OUI')-(a.urgent==='OUI')||String(b.dateReception).localeCompare(String(a.dateReception)));
+  const q=S.q.trim();
+  /* une recherche porte sur TOUS les bons (y compris terminés / facturés) */
+  let L=(q?B:B.filter(f)).filter(b=>!S.fComp||b.compagnonId===S.fComp||(S.fComp==='_'&&!b.compagnonId))
+    .filter(b=>!q||correspond(b,q))
+    .sort((a,b)=>(b.urgent==='OUI')-(a.urgent==='OUI')||((b.appelLe&&attendAppel(b)?1:0)-(a.appelLe&&attendAppel(a)?1:0))||String(b.dateReception).localeCompare(String(a.dateReception)));
   let h='<div class="chips">'+filtres.map(x=>'<span class="chip '+(S.filtre===x[0]?'on':'')+'" onclick="S.filtre=\''+x[0]+'\';vBons()">'+esc(x[1])+' ('+B.filter(x[2]).length+')</span>').join('')+'</div>'+
-   '<div class="row" style="margin-bottom:10px"><input type="text" class="grow" placeholder="🔎 N° de bon, n° de fichier, adresse, locataire…" value="'+esc(S.q)+'" oninput="S.q=this.value;clearTimeout(window._qt);window._qt=setTimeout(()=>{vBons();const i=$(\'#main input[type=text]\');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">'+
+   '<div class="row" style="margin-bottom:10px"><input type="text" class="grow" placeholder="🔎 Rechercher : n° de bon, nom, adresse, téléphone…" value="'+esc(S.q)+'" oninput="S.q=this.value;clearTimeout(window._qt);window._qt=setTimeout(()=>{vBons();const i=$(\'#main input[type=text]\');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">'+
    '<select style="width:auto" onchange="S.fComp=this.value;vBons()"><option value="">Tous compagnons</option><option value="_" '+(S.fComp==='_'?'selected':'')+'>Non attribués</option>'+S.data.compagnons.map(c=>'<option value="'+c.id+'" '+(S.fComp===c.id?'selected':'')+'>'+esc(c.nom)+'</option>').join('')+'</select>'+
    '<button class="btn sec sm" onclick="editBon()">＋ Bon manuel</button>'+
    (S.filtre==='Terminé'?'<button class="btn sec sm" onclick="toutSelTermines()">☑ Sélectionner les non exportés</button>':'')+'</div>'+
+   (q?'<div class="mut" style="margin:-4px 0 8px">'+L.length+' résultat(s) pour « '+esc(q)+' » dans tous les bons (y compris terminés et facturés) – <a href="#" onclick="S.q=\'\';vBons();return false">effacer</a></div>':'')+
    '<div id="selbar"></div>';
   h+=L.length?L.map(carteBonAdmin).join(''):'<div class="card empty">Aucun bon</div>';
   $('#main').innerHTML=h; majSel();
 }
+function sansAccent(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+/* recherche : n° de bon, n° de fichier extranet, nom, adresse, ville, téléphone (avec ou sans espaces), donneur d'ordre, objet */
+function correspond(b,q){
+  const mots=sansAccent(q).split(/\s+/).filter(x=>x);
+  const texte=sansAccent([b.numero,b.fichierOrigine,b.locataire,b.contact2,b.adresse,b.ville,b.donneurOrdre,b.objet,b.telLocataire,compNom(b.compagnonId)].join(' '));
+  const chiffresQ=q.replace(/\D/g,'');
+  if(chiffresQ.length>=4){ /* numéro de téléphone ou de bon tapé avec ou sans espaces / « / » */
+    const chiffres=[b.telLocataire,b.contact2,b.numero,b.fichierOrigine].join(' ').replace(/\D/g,' ').replace(/\s+/g,'')+' '+String(b.telLocataire||'').replace(/\D/g,'')+' '+String(b.numero||'').replace(/\D/g,'');
+    if(chiffres.indexOf(chiffresQ)>=0||chiffres.indexOf(chiffresQ.replace(/^33/,'0'))>=0) return true;
+  }
+  return mots.every(m=>texte.indexOf(m)>=0);
+}
+function rechercher(v){ S.q=v; S.filtre='tous'; S.fComp=''; S.tab='bons'; render(); const i=$('#main input[type=text]'); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } }
 function majSel(){
   const ids=Object.keys(S.sel).filter(k=>S.sel[k]);
   const el=$('#selbar'); if(!el) return;
@@ -448,6 +493,7 @@ async function editBon(id){
   const f=(k,l,t,extra)=>'<div><label>'+l+'</label><input type="'+(t||'text')+'" id="f_'+k+'" value="'+esc(b[k]||'')+'" '+(extra||'')+'></div>';
   let h='<div class="mb">'+
    (b.fichierBonUrl?'<div class="row" style="margin-bottom:6px"><a class="btn sec sm" href="'+esc(b.fichierBonUrl)+'" target="_blank">📄 Voir le bon d\'origine</a>'+(b.rapportPdfUrl?'<a class="btn sec sm" href="'+esc(b.rapportPdfUrl)+'" target="_blank">✅ Dernier rapport</a>':'')+(b.dossierUrl?'<a class="btn sec sm" href="'+esc(b.dossierUrl)+'" target="_blank">📁 Dossier du bon</a>':'')+'</div>':'')+
+   (id?'<div class="card row" style="'+(b.appelLe?'background:#f1f8f1;border-color:var(--ok)':'')+'"><span class="grow"><b>Le locataire a-t-il appelé ?</b></span>'+boutonAppel(Object.assign({},b,{statut:attendAppel(b)?b.statut:'À attribuer'})).replace('basculerAppel(','closeModal(true);basculerAppel(')+'</div>':'')+
    '<div class="card"><b>Attribution</b><div class="grid2">'+
      '<div><label>Compagnon</label><select id="f_compagnonId"><option value="">— Non attribué —</option>'+comps.map(c=>'<option value="'+c.id+'" '+(c.id===b.compagnonId?'selected':'')+'>'+esc(c.nom)+'</option>').join('')+'</select></div>'+
      '<div><label>Statut</label><select id="f_statut">'+STATUTS.map(s=>'<option '+(s===b.statut?'selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
@@ -487,7 +533,7 @@ async function editBon(id){
 }
 async function supprimerBon(id){
   const b=S.data.bons.find(x=>x.id===id); if(!b) return;
-  if(!confirm('Supprimer le bon '+(b.numero||'')+' – '+(b.adresse||'')+' ?\n\nIl disparaît de l\'appli (et des téléphones). Son dossier Drive part à la corbeille (récupérable 30 jours).\nTu pourras ensuite le réimporter.')) return;
+  if(!(await confirmer('Supprimer le bon '+(b.numero||'')+' – '+(b.adresse||'')+' ?\n\nIl disparaît de l\'appli (et des téléphones). Son dossier Drive part à la corbeille (récupérable 30 jours).\nTu pourras ensuite le réimporter.','Supprimer','Annuler',true))) return;
   await call('supprimerBon',S.pin,id); closeModal(true);
   S.data.bons=S.data.bons.filter(x=>x.id!==id); render(); toast('Bon supprimé'); refresh(true);
 }
@@ -779,7 +825,7 @@ async function validerRapport(){
   ['r_trav','r_mat','r_res'].forEach(i=>{ const el=$('#'+i); if(el) el.style.borderColor=el.value.trim()?'':'var(--err)'; });
   if(manque.length){ const el=$('#'+(!R.travaux.trim()?'r_trav':!R.materiel.trim()?'r_mat':'r_res')); if(el){ el.scrollIntoView({block:'center'}); el.focus(); } return toast('À remplir : '+manque.join(', '),4500); }
   if(!R.heureDepart){ R.heureDepart=hhmm(); $('#r_dep').value=R.heureDepart; }
-  if(!R.absent&&(!sig||sig.vide())) { if(!confirm('Pas de signature. Envoyer quand même ?')) return; }
+  if(!R.absent&&(!sig||sig.vide())) { if(!(await confirmer('Pas de signature de l\'occupant.\nEnvoyer quand même ?','Envoyer','Revenir'))) return; }
   if(!R.absent) R.signature=sig.data();
   const att=enAttente(R.bonId);
   const envoi=Object.assign({},R,{clientRef:(att&&att.clientRef)||R.clientRef||('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6))});
