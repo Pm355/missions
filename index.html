@@ -410,7 +410,7 @@ function vBons(){
    '<div class="row" style="margin-bottom:10px"><input type="text" class="grow" placeholder="🔎 Rechercher : n° de bon, nom, adresse, téléphone…" value="'+esc(S.q)+'" oninput="S.q=this.value;clearTimeout(window._qt);window._qt=setTimeout(()=>{vBons();const i=$(\'#main input[type=text]\');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">'+
    '<select style="width:auto" onchange="S.fComp=this.value;vBons()"><option value="">Tous compagnons</option><option value="_" '+(S.fComp==='_'?'selected':'')+'>Non attribués</option>'+S.data.compagnons.map(c=>'<option value="'+c.id+'" '+(S.fComp===c.id?'selected':'')+'>'+esc(c.nom)+'</option>').join('')+'</select>'+
    '<button class="btn sec sm" onclick="editBon()">＋ Bon manuel</button>'+
-   (S.filtre==='Terminé'?'<button class="btn sec sm" onclick="toutSelTermines()">☑ Sélectionner les non exportés</button>':'')+'</div>'+
+   (S.filtre==='Terminé'?'<button class="btn sec sm" onclick="toutSelTermines()">☑ Tout sélectionner</button>':'')+'</div>'+
    (q?'<div class="mut" style="margin:-4px 0 8px">'+L.length+' résultat(s) pour « '+esc(q)+' » dans tous les bons (y compris terminés et facturés) – <a href="#" onclick="S.q=\'\';vBons();return false">effacer</a></div>':'')+
    '<div id="selbar"></div>';
   h+=L.length?L.map(carteBonAdmin).join(''):'<div class="card empty">Aucun bon</div>';
@@ -432,7 +432,7 @@ function rechercher(v){ S.q=v; S.filtre='tous'; S.fComp=''; S.tab='bons'; render
 function majSel(){
   const ids=Object.keys(S.sel).filter(k=>S.sel[k]);
   const el=$('#selbar'); if(!el) return;
-  el.innerHTML=ids.length?'<div class="banner row"><span class="grow">'+ids.length+' bon(s) sélectionné(s)</span><button class="btn sm" onclick="exporterSel()">📤 Export Sage</button><button class="btn sm ok" onclick="facturerSel()">Marquer facturé(s)</button><button class="btn sec sm" onclick="S.sel={};vBons()">Annuler</button></div>':'';
+  el.innerHTML=ids.length?'<div class="banner row"><span class="grow">'+ids.length+' bon(s) sélectionné(s)</span><button class="btn sm ok" onclick="facturerSel()">✅ Facturer → fichier Sage</button><button class="btn sec sm" onclick="S.sel={};vBons()">Annuler</button></div>':'';
 }
 async function exporterSel(){
   const ids=Object.keys(S.sel).filter(k=>S.sel[k]); if(!ids.length) return;
@@ -442,10 +442,26 @@ async function exporterSel(){
     '<a class="btn full" href="'+esc(r.url)+'" target="_blank">📄 Ouvrir / télécharger le fichier (Drive › Exports Sage)</a></div>');
   refresh(true);
 }
-function toutSelTermines(){ S.data.bons.filter(b=>b.statut==='Terminé'&&!b.exporteLe).forEach(b=>S.sel[b.id]=true); vBons(); }
+function toutSelTermines(){ S.data.bons.filter(b=>b.statut==='Terminé').forEach(b=>S.sel[b.id]=true); vBons(); }
 async function facturerSel(){
   const ids=Object.keys(S.sel).filter(k=>S.sel[k]); if(!ids.length) return;
-  await call('setStatut',S.pin,ids,'Facturé'); S.sel={}; toast(ids.length+' bon(s) facturé(s)'); refresh(true);
+  await facturerIds(ids);
+}
+/* Facturé = fichier Sage (téléchargé + rangé dans Drive et Retour MABC) puis statut Facturé */
+async function facturerIds(ids){
+  const r=await call('facturer',S.pin,ids);
+  const F=r.fichiers||[];
+  F.forEach((f,i)=>setTimeout(()=>{ try{ const a=document.createElement('a'); a.href='data:text/csv;base64,'+f.b64; a.download=f.nom; document.body.appendChild(a); a.click(); a.remove(); }catch(e){} },i*400));
+  S.sel={}; closeModal(true);
+  modal('Facturé ✅','<div class="mb"><div class="card">✅ <b>'+r.nbBons+' bon(s) facturé(s)</b> – un fichier Sage par bon :'+
+    F.map(f=>'<div class="row" style="border-top:1px solid var(--bd);padding:6px 0;margin-top:6px"><span class="grow"><b>'+esc(f.numero)+'</b> – '+esc(f.client)+'<br><span class="mut">'+esc(f.nom)+'</span></span><a class="btn sec sm" href="'+esc(f.url)+'" target="_blank">Drive</a></div>').join('')+'</div>'+
+    '<div class="card"><b>Dans Sage Batigest, pour chaque bon :</b><ol style="margin:6px 0 0;padding-left:20px;line-height:1.6">'+
+    '<li>Crée la <b>facture</b> (ou le devis) du client : donneur d\'ordre, chantier = adresse, référence = n° de bon.</li>'+
+    '<li>Dans les lignes, utilise <b>Importer › fichier externe (ASCII / Excel)</b>.</li>'+
+    '<li>Choisis le fichier <b>Sage n° de bon</b> (Téléchargements, ou Retour MABC › Exports Sage).</li>'+
+    '<li>Associe les colonnes : Référence, Désignation, Unité, Quantité. Séparateur <b>;</b>. Ignore la 1<sup>re</sup> ligne (titres).</li></ol>'+
+    '<div class="mut" style="margin-top:6px">Batigest retrouve chaque référence dans ta bibliothèque et applique son prix. L\'association des colonnes peut être enregistrée la première fois, pour ne plus la refaire.</div></div></div>');
+  refresh(true);
 }
 
 /* --- lignes de prestations (codes BPU / références Sage) – jamais de prix --- */
@@ -519,7 +535,7 @@ async function editBon(id){
    (b.texteBon?'<details class="card"><summary><b>Texte complet du bon</b></summary><pre class="txtbon">'+esc(b.texteBon)+'</pre></details>':'')+
    (id?'<div id="rapList" class="card mut">Chargement des rapports…</div>':'')+
    '<div class="row"><button class="btn grow" onclick="saveBonForm(\''+(id||'')+'\')">Enregistrer</button>'+
-   (id&&b.statut==='Terminé'?'<button class="btn ok" onclick="$(\'#f_statut\').value=\'Facturé\';saveBonForm(\''+id+'\')">Facturé</button>':'')+
+   (id&&(b.statut==='Terminé'||b.statut==='À poursuivre')?'<button class="btn ok" onclick="facturerFiche(\''+id+'\')">✅ Facturé → Sage</button>':'')+
    (id?'<button class="btn err" onclick="supprimerBon(\''+id+'\')">🗑 Supprimer</button>':'')+'</div>'+
   '</div>';
   modal(id?('Bon '+(b.numero||'')):'Nouveau bon', h);
@@ -537,12 +553,16 @@ async function supprimerBon(id){
   await call('supprimerBon',S.pin,id); closeModal(true);
   S.data.bons=S.data.bons.filter(x=>x.id!==id); render(); toast('Bon supprimé'); refresh(true);
 }
+async function facturerFiche(id){
+  await saveBonForm(id,true);   /* enregistre d'abord les corrections (références…) */
+  await facturerIds([id]);
+}
 async function saveBonForm(id){
   const keys=['numero','donneurOrdre','adresse','ville','locataire','telLocataire','contact2','objet','description','urgent','dateLimite','acces','compagnonId','datePrevue','creneau','statut','notesBureau'];
   const o={id:id||undefined}; keys.forEach(k=>o[k]=$('#f_'+k).value.trim());
   if(o.compagnonId&&o.statut==='À attribuer') o.statut='Attribué';
   o.lignes=(window._L_adm||[]).filter(l=>l.code||l.des);
-  await call('saveBon',S.pin,o); closeModal(); toast('Enregistré'); refresh(true);
+  await call('saveBon',S.pin,o); if(arguments[1]) return; closeModal(); toast('Enregistré'); refresh(true);
 }
 
 /* --- import --- */
