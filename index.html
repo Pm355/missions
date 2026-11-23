@@ -181,17 +181,21 @@ function mapsLink(b){ return 'https://www.google.com/maps/dir/?api=1&travelmode=
 function wazeLink(b){ return 'https://waze.com/ul?navigate=yes&q='+encodeURIComponent(adrGps(b)); }
 function telsHtml(txt){ return esc(txt).replace(/((?:\+33\s?|0)[1-9](?:[\s.\-]?\d{2}){4})/g,function(t){ return '<a href="tel:'+t.replace(/[^\d+]/g,'')+'" onclick="event.stopPropagation()">'+t+'</a>'; }); }
 function garderCopie(){}
-function ouvrirBon(id){
+function ouvrirPdfB64(p,nomDefaut){
+  const bin=atob(p.b64); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+  const url=URL.createObjectURL(new Blob([u],{type:'application/pdf'}));
+  const w=window.open(url,'_blank');
+  if(!w){ const a=document.createElement('a'); a.href=url; a.download=(p.nom||nomDefaut).replace(/[\\/:*?"<>|]/g,'-'); document.body.appendChild(a); a.click(); a.remove(); }
+  setTimeout(()=>URL.revokeObjectURL(url),120000);
+}
+async function ouvrirFicheBureau(id){ try{ const p=await call('bonPdf',S.pin,id); if(p&&p.b64) ouvrirPdfB64(p,'Fiche.pdf'); }catch(e){} }
+async function ouvrirBon(id){
   const b=S.data.bons.find(x=>x.id===id); if(!b) return;
+  if(S.user&&S.user.role==='admin'&&b.fichierBonUrl&&b.fichierBonUrl!=='fiche'){ window.open(b.fichierBonUrl,'_blank'); return; }
   let p=null; try{ p=JSON.parse(lsGet('pdf_'+id)||'null'); }catch(e){}
-  if(p&&p.b64){
-    const bin=atob(p.b64); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
-    const url=URL.createObjectURL(new Blob([u],{type:'application/pdf'}));
-    const a=document.createElement('a'); a.href=url; a.download=(p.nom||('Bon '+(b.numero||'')+'.pdf')).replace(/[\\/:*?"<>|]/g,'-'); document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),60000); return;
-  }
-  if(navigator.onLine&&b.fichierBonUrl) window.open(b.fichierBonUrl,'_blank');
-  else toast('📶 Le PDF du bon n\'a pas encore été chargé dans le téléphone (il le sera au prochain passage avec du réseau). Le texte du bon est en bas de la mission.',6000);
+  if(navigator.onLine&&(!p||p.majLe!==b.majLe)){ try{ const q=await api('bonPdf',S.pin,id); if(q&&q.b64){ p=q; lsSet('pdf_'+id,JSON.stringify(q)); } }catch(e){} }
+  if(p&&p.b64){ ouvrirPdfB64(p,'Bon.pdf'); return; }
+  toast('📶 La fiche n\'a pas encore été chargée dans le téléphone (elle le sera au prochain passage avec du réseau). Les infos sont dans la mission.',6000);
 }
 function enRetard(b){ return b.dateLimite && b.dateLimite<today() && ['Terminé','Facturé','Annulé'].indexOf(b.statut)<0; }
 
@@ -228,7 +232,8 @@ function bandeauHorsLigne(){
 async function chargerPdfs(){ /* garde dans le téléphone le PDF de chaque mission ouverte */
   if(!S.data||!S.user||S.user.role==='admin') return;
   for(const b of S.data.bons.filter(x=>['Attribué','En cours','À poursuivre'].indexOf(x.statut)>=0&&x.fichierBonId)){
-    if(lsGet('pdf_'+b.id)) continue;
+    let c=null; try{ c=JSON.parse(lsGet('pdf_'+b.id)||'null'); }catch(e){}
+    if(c&&c.majLe===b.majLe) continue;
     try{ const p=await api('bonPdf',S.pin,b.id); if(p&&p.b64) lsSet('pdf_'+b.id,JSON.stringify(p)); }catch(e){ break; }
   }
   /* nettoyage des PDF des missions terminées */
@@ -367,7 +372,7 @@ function carteBonAdmin(b){
   const chk=b.statut==='Terminé'?'<input type="checkbox" class="list-check" '+(S.sel[b.id]?'checked':'')+' onclick="event.stopPropagation();S.sel[\''+b.id+'\']=this.checked;majSel()">':'';
   return '<div class="card bon '+(b.appelLe&&attendAppel(b)?'appele':(b.urgent==='OUI'||enRetard(b)?'urgent':''))+'" onclick="editBon(\''+b.id+'\')">'+
     '<div class="row">'+chk+'<span class="t grow">'+esc(b.numero||'(sans n°)')+(b.donneurOrdre?' <span class="mut">· '+esc(b.donneurOrdre)+'</span>':'')+'</span>'+
-    (b.urgent==='OUI'?'<span class="pill urg">URGENT</span>':'')+(enRetard(b)?'<span class="pill urg">Retard</span>':'')+pill(b.statut)+
+    (b.amiante==='OUI'?'<span class="pill urg">⚠ AMIANTE</span>':'')+(b.urgent==='OUI'?'<span class="pill urg">URGENT</span>':'')+(enRetard(b)?'<span class="pill urg">Retard</span>':'')+pill(b.statut)+
     '<button class="btn sec sm" title="Supprimer ce bon" style="padding:4px 8px" onclick="event.stopPropagation();supprimerBon(\''+b.id+'\')">🗑</button></div>'+
     '<div class="adr"><a href="'+mapsLink(b)+'" target="_blank" onclick="event.stopPropagation()">📍 '+esc(b.adresse)+' '+esc(b.ville)+'</a></div>'+
     '<div class="mut">'+esc((b.objet||'').slice(0,140))+'</div>'+
@@ -508,8 +513,8 @@ async function editBon(id){
   const comps=S.data.compagnons.filter(c=>c.actif!=='NON'||c.id===b.compagnonId);
   const f=(k,l,t,extra)=>'<div><label>'+l+'</label><input type="'+(t||'text')+'" id="f_'+k+'" value="'+esc(b[k]||'')+'" '+(extra||'')+'></div>';
   let h='<div class="mb">'+
-   (b.fichierBonUrl?'<div class="row" style="margin-bottom:6px"><a class="btn sec sm" href="'+esc(b.fichierBonUrl)+'" target="_blank">📄 Voir le bon d\'origine</a>'+(b.rapportPdfUrl?'<a class="btn sec sm" href="'+esc(b.rapportPdfUrl)+'" target="_blank">✅ Dernier rapport</a>':'')+(b.dossierUrl?'<a class="btn sec sm" href="'+esc(b.dossierUrl)+'" target="_blank">📁 Dossier du bon</a>':'')+'</div>':'')+
-   (id?'<div class="card row" style="'+(b.appelLe?'background:#f1f8f1;border-color:var(--ok)':'')+'"><span class="grow"><b>Le locataire a-t-il appelé ?</b></span>'+boutonAppel(Object.assign({},b,{statut:attendAppel(b)?b.statut:'À attribuer'})).replace('basculerAppel(','closeModal(true);basculerAppel(')+'</div>':'')+
+   (b.fichierBonUrl?'<div class="row" style="margin-bottom:6px"><a class="btn sec sm" href="'+esc(b.fichierBonUrl)+'" target="_blank">📄 Bon d\'origine</a>'+(b.rapportPdfUrl?'<a class="btn sec sm" href="'+esc(b.rapportPdfUrl)+'" target="_blank">✅ Dernier rapport</a>':'')+(b.dossierUrl?'<a class="btn sec sm" href="'+esc(b.dossierUrl)+'" target="_blank">📁 Dossier du bon</a>':'')+'</div>':'')+
+   (id&&attendAppel(b)?'<div class="card row" style="'+(b.appelLe?'background:#f1f8f1;border-color:var(--ok)':'')+'"><span class="grow"><b>Le locataire a-t-il appelé ?</b></span>'+boutonAppel(Object.assign({},b,{statut:attendAppel(b)?b.statut:'À attribuer'})).replace('basculerAppel(','closeModal(true);basculerAppel(')+'</div>':'')+
    '<div class="card"><b>Attribution</b><div class="grid2">'+
      '<div><label>Compagnon</label><select id="f_compagnonId"><option value="">— Non attribué —</option>'+comps.map(c=>'<option value="'+c.id+'" '+(c.id===b.compagnonId?'selected':'')+'>'+esc(c.nom)+'</option>').join('')+'</select></div>'+
      '<div><label>Statut</label><select id="f_statut">'+STATUTS.map(s=>'<option '+(s===b.statut?'selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
@@ -523,6 +528,7 @@ async function editBon(id){
      '<div style="grid-column:1/-1"><label>Autre contact (nom + téléphone)</label><input type="text" id="f_contact2" value="'+esc(b.contact2||'')+'" placeholder="Gardien M. Martin 06 12 34 56 78"></div>'+
      f('dateLimite','Date limite','date')+
      '<div><label>Urgent</label><select id="f_urgent"><option value="">Non</option><option value="OUI" '+(b.urgent==='OUI'?'selected':'')+'>OUI</option></select></div>'+
+     '<div><label>Risque amiante</label><select id="f_amiante"><option value="">Non</option><option value="OUI" '+(b.amiante==='OUI'?'selected':'')+'>⚠ OUI</option></select></div>'+
    '</div>'+
    '<label>Objet</label><input type="text" id="f_objet" value="'+esc(b.objet||'')+'">'+
    '<label>Description / travaux demandés</label><textarea id="f_description">'+esc(b.description||'')+'</textarea>'+
@@ -532,7 +538,6 @@ async function editBon(id){
    '<label style="margin-top:0">Accès (codes, clés, gardien…)</label><input type="text" id="f_acces" value="'+esc(b.acces||'')+'">'+
    '<label>Notes bureau (non visibles par le compagnon)</label><textarea id="f_notesBureau" style="min-height:50px">'+esc(b.notesBureau||'')+'</textarea>'+
    '</div>'+
-   (b.texteBon?'<details class="card"><summary><b>Texte complet du bon</b></summary><pre class="txtbon">'+esc(b.texteBon)+'</pre></details>':'')+
    (id?'<div id="rapList" class="card mut">Chargement des rapports…</div>':'')+
    '<div class="row"><button class="btn grow" onclick="saveBonForm(\''+(id||'')+'\')">Enregistrer</button>'+
    (id&&(b.statut==='Terminé'||b.statut==='À poursuivre')?'<button class="btn ok" onclick="facturerFiche(\''+id+'\')">✅ Facturé → Sage</button>':'')+
@@ -558,7 +563,7 @@ async function facturerFiche(id){
   await facturerIds([id]);
 }
 async function saveBonForm(id){
-  const keys=['numero','donneurOrdre','adresse','ville','locataire','telLocataire','contact2','objet','description','urgent','dateLimite','acces','compagnonId','datePrevue','creneau','statut','notesBureau'];
+  const keys=['amiante','numero','donneurOrdre','adresse','ville','locataire','telLocataire','contact2','objet','description','urgent','dateLimite','acces','compagnonId','datePrevue','creneau','statut','notesBureau'];
   const o={id:id||undefined}; keys.forEach(k=>o[k]=$('#f_'+k).value.trim());
   if(o.compagnonId&&o.statut==='À attribuer') o.statut='Attribué';
   o.lignes=(window._L_adm||[]).filter(l=>l.code||l.des);
@@ -709,7 +714,7 @@ function renderCompagnon(){
 function carteMission(b){
   const brouillon=lsGet('draft_'+b.id);
   return '<div class="card bon '+(!b.vu&&b.statut==='Attribué'?'nouveau':(b.urgent==='OUI'?'urgent':''))+'" onclick="ouvrirMission(\''+b.id+'\')">'+
-    '<div class="row"><span class="t grow">'+esc(b.numero)+'</span>'+(!b.vu&&b.statut==='Attribué'?'<span class="pill new">NOUVEAU</span>':'')+(b.urgent==='OUI'?'<span class="pill urg">URGENT</span>':'')+pill(b.statut)+'</div>'+
+    '<div class="row"><span class="t grow">'+esc(b.numero)+'</span>'+(b.amiante==='OUI'?'<span class="pill urg">⚠ AMIANTE</span>':'')+(!b.vu&&b.statut==='Attribué'?'<span class="pill new">NOUVEAU</span>':'')+(b.urgent==='OUI'?'<span class="pill urg">URGENT</span>':'')+pill(b.statut)+'</div>'+
     '<div class="adr"><a href="'+mapsLink(b)+'" target="_blank" onclick="event.stopPropagation()">📍 '+esc(b.adresse)+' '+esc(b.ville)+'</a></div>'+
     '<div class="mut">'+esc((b.objet||'').slice(0,120))+'</div>'+
     '<div class="row mut" style="margin-top:4px">'+(b.datePrevue?'<span>📅 '+jourFr(b.datePrevue)+(b.creneau?' · '+esc(b.creneau):'')+'</span>':'<span>📅 date à caler</span>')+(enAttente(b.id)?'<span style="color:var(--warn);font-weight:700">📤 rapport en attente d\'envoi</span>':(brouillon?'<span>📝 rapport en brouillon</span>':''))+'</div></div>';
@@ -719,6 +724,7 @@ function ouvrirMission(id){
   if(!b.vu){ b.vu='1'; garderCopie(); api('marquerVu',S.pin,id).catch(()=>{}); }
   const ouvert=['Attribué','En cours','À poursuivre'].indexOf(b.statut)>=0;
   let h='<div class="mb">'+
+   (b.amiante==='OUI'?'<div class="card" style="background:#c62828;color:#fff;font-weight:700;border-color:#c62828">⚠ SOUMIS AU RISQUE AMIANTE – appliquer les mesures de protection</div>':'')+
    '<div class="card"><div class="row"><span class="grow"><b style="font-size:17px">'+esc(b.numero)+'</b>'+(b.donneurOrdre?'<div class="mut">'+esc(b.donneurOrdre)+'</div>':'')+'</span>'+pill(b.statut)+'</div>'+
    '<a href="'+mapsLink(b)+'" target="_blank" style="display:block;margin-top:8px;font-size:16px;text-decoration:none;color:inherit;background:var(--c2);border-radius:10px;padding:10px">📍 <b style="color:var(--c);text-decoration:underline">'+esc(b.adresse)+'<br>'+esc(b.ville)+'</b><div class="mut" style="margin-top:2px">Toucher pour lancer le GPS</div></a>'+
    (b.locataire||b.telLocataire?'<div style="margin-top:8px">👤 '+esc(b.locataire)+(b.telLocataire?' – '+telsHtml(b.telLocataire):'')+'</div>':'')+
@@ -733,9 +739,8 @@ function ouvrirMission(id){
      '<a class="btn sec grow" href="'+wazeLink(b)+'" target="_blank">🚗 Waze</a>'+
      (b.fichierBonUrl?'<button class="btn sec grow" onclick="ouvrirBon(\''+b.id+'\')">📄 Le bon</button>':'')+
    '</div>'+
-   '<div class="card"><b>Travaux demandés</b><div style="margin-top:6px;white-space:pre-wrap">'+esc(b.objet)+(b.description?'\n\n'+esc(b.description):'')+'</div>'+
+   '<div class="card"><b>Travaux demandés</b><div style="margin-top:6px;white-space:pre-wrap;font-weight:700">'+esc(b.objet)+'</div>'+(b.description&&!lignesDe(b).length?'<div style="margin-top:6px;white-space:pre-wrap">'+esc(b.description)+'</div>':'')+
    (lignesDe(b).length?'<div style="margin-top:8px">'+lignesDe(b).map(l=>'<div class="row" style="border-top:1px solid var(--bd);padding:5px 0"><b style="min-width:70px">'+esc(l.code)+'</b><span class="grow">'+esc(l.des)+'</span><span class="mut">'+esc(l.qteCde)+' '+esc(l.unite)+'</span></div>').join('')+'</div>':'')+'</div>'+
-   (b.texteBon?'<details class="card"><summary><b>Texte complet du bon</b></summary><pre class="txtbon">'+esc(b.texteBon)+'</pre></details>':'')+
    (b.rapportPdfUrl?'<a class="btn sec full" style="margin-bottom:10px" href="'+esc(b.rapportPdfUrl)+'" target="_blank">✅ Voir mon dernier rapport</a>':'')+
    (enAttente(b.id)?'<div class="banner">📤 <b>Rapport fait, en attente d\'envoi</b> (pas de réseau au moment de l\'envoi). Il partira tout seul dès que le réseau revient.'+(lsGet('err_'+b.id)?'<br><span style="color:var(--err)">Dernière erreur : '+esc(lsGet('err_'+b.id))+'</span>':'')+
      '<div class="row" style="margin-top:8px"><button class="btn sm warn grow" onclick="envoyerFileAttente(true).then(()=>{closeModal(true);renderCompagnon();})">📤 Réessayer maintenant</button><button class="btn sm sec grow" onclick="formRapport(\''+b.id+'\')">✏️ Corriger le rapport</button></div></div>':
